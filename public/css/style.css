@@ -889,6 +889,74 @@ body {
   }
 }
 
+.skeleton-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.skeleton-badge {
+  width: 48px;
+  height: 18px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-badge:nth-child(2) {
+  width: 40px;
+}
+
+.skeleton-badge:nth-child(3) {
+  width: 36px;
+}
+
+.skeleton-meta .skeleton-line {
+  height: 12px;
+  width: 60px;
+  margin-left: auto;
+}
+
+.skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.skeleton-text .skeleton-line {
+  height: 14px;
+}
+
+.skeleton-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.skeleton-actions .skeleton-line {
+  height: 28px;
+  width: 72px;
+  border-radius: 8px;
+}
+
 /* ─── Copy Toast ─── */
 .copy-toast {
   position: fixed;
