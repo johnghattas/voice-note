@@ -1372,4 +1372,13 @@ body {
     width: 24px;
     height: 24px;
   }
+
+  /* Skeleton mobile adjustments */
+  .skeleton-meta {
+    flex-wrap: wrap;
+  }
+
+  .skeleton-actions .skeleton-line {
+    width: 64px;
+  }
 }
