@@ -8,6 +8,7 @@ let lastDoc = null;
 let loading = false;
 let hasMore = true;
 let unsubscribeLive = null;
+let isInitialLoad = false;
 const PAGE_SIZE = 20;
 
 function showSkeletonLoading(count = 5) {
@@ -39,7 +40,9 @@ function initHistory(user) {
   allTranscriptions = [];
   lastDoc = null;
   hasMore = true;
+  isInitialLoad = true;
   historyList.innerHTML = "";
+  showSkeletonLoading(5);
 
   listenForNewDocs(user);
   loadPage(user);
@@ -113,8 +116,13 @@ async function loadPage(user) {
     }
 
     renderHistory();
+    isInitialLoad = false;
   } catch (err) {
     console.error("Load history error:", err);
+    if (isInitialLoad) {
+      historyList.innerHTML = "";
+      isInitialLoad = false;
+    }
   }
 
   loading = false;
