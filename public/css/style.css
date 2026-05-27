@@ -232,6 +232,7 @@ body {
   padding: 12px 20px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  max-width: calc(100vw - 24px);
 }
 
 .recorder-buttons {
@@ -1249,6 +1250,11 @@ body {
 
 /* ─── Mobile ─── */
 @media (max-width: 480px) {
+  .recorder-bar {
+    padding: 10px 14px;
+    border-radius: 16px;
+  }
+
   .app-header {
     padding: 10px 14px;
   }
