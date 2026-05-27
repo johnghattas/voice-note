@@ -8,12 +8,42 @@ let lastDoc = null;
 let loading = false;
 let hasMore = true;
 let unsubscribeLive = null;
+let isInitialLoad = false;
+let skeletonShownAt = null;
+let skeletonMinDisplayTimer = null;
 const PAGE_SIZE = 20;
+
+function showSkeletonLoading(count = 5) {
+  const cards = Array.from({ length: count }, () => `
+    <div class="skeleton-card">
+      <div class="skeleton-meta">
+        <span class="skeleton-badge"></span>
+        <span class="skeleton-badge"></span>
+        <span class="skeleton-badge"></span>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-text">
+        <div class="skeleton-line" style="width: 100%"></div>
+        <div class="skeleton-line" style="width: 85%"></div>
+        <div class="skeleton-line" style="width: 60%"></div>
+      </div>
+      <div class="skeleton-actions">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+  `).join("");
+
+  historyList.innerHTML = cards;
+  skeletonShownAt = Date.now();
+}
 
 function initHistory(user) {
   allTranscriptions = [];
   lastDoc = null;
   hasMore = true;
+  isInitialLoad = true;
   historyList.innerHTML = "";
 
   listenForNewDocs(user);
@@ -55,6 +85,11 @@ function listenForNewDocs(user) {
 async function loadPage(user) {
   if (loading || !hasMore) return;
   loading = true;
+
+  if (isInitialLoad) {
+    showSkeletonLoading(5);
+  }
+
   loadMoreBtn.textContent = "Loading...";
 
   let q = db
@@ -88,8 +123,13 @@ async function loadPage(user) {
     }
 
     renderHistory();
+    isInitialLoad = false;
   } catch (err) {
     console.error("Load history error:", err);
+    if (isInitialLoad) {
+      historyList.innerHTML = "";
+      isInitialLoad = false;
+    }
   }
 
   loading = false;
@@ -101,6 +141,29 @@ loadMoreBtn.addEventListener("click", () => {
 });
 
 function renderHistory() {
+  if (skeletonMinDisplayTimer) {
+    clearTimeout(skeletonMinDisplayTimer);
+    skeletonMinDisplayTimer = null;
+  }
+
+  // Prevent skeleton flash: ensure minimum 300ms display time
+  if (isInitialLoad && skeletonShownAt) {
+    const elapsed = Date.now() - skeletonShownAt;
+    const MIN_DISPLAY_MS = 300;
+    if (elapsed < MIN_DISPLAY_MS) {
+      skeletonMinDisplayTimer = setTimeout(() => {
+        skeletonMinDisplayTimer = null;
+        renderHistory();
+      }, MIN_DISPLAY_MS - elapsed);
+      return;
+    }
+  }
+
+  // Use skeletonShownAt as fallback signal for fade-in since
+  // loadPage() sets isInitialLoad=false after renderHistory() returns
+  const wasInitialLoad = isInitialLoad || !!skeletonShownAt;
+  skeletonShownAt = null;
+
   const filter = searchInput.value.toLowerCase();
   const filtered = filter
     ? allTranscriptions.filter((t) => t.text.toLowerCase().includes(filter))
@@ -116,6 +179,13 @@ function renderHistory() {
 
   historyList.innerHTML = filtered.map((t) => createCard(t)).join("");
   bindCardEvents();
+
+  if (wasInitialLoad) {
+    historyList.classList.add("fade-in");
+    historyList.addEventListener("animationend", () => {
+      historyList.classList.remove("fade-in");
+    }, { once: true });
+  }
 }
 
 function createCard(t) {
