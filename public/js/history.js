@@ -42,7 +42,6 @@ function initHistory(user) {
   hasMore = true;
   isInitialLoad = true;
   historyList.innerHTML = "";
-  showSkeletonLoading(5);
 
   listenForNewDocs(user);
   loadPage(user);
@@ -83,6 +82,11 @@ function listenForNewDocs(user) {
 async function loadPage(user) {
   if (loading || !hasMore) return;
   loading = true;
+
+  if (isInitialLoad) {
+    showSkeletonLoading(5);
+  }
+
   loadMoreBtn.textContent = "Loading...";
 
   let q = db
