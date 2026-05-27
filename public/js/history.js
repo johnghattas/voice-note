@@ -10,6 +10,31 @@ let hasMore = true;
 let unsubscribeLive = null;
 const PAGE_SIZE = 20;
 
+function showSkeletonLoading(count = 5) {
+  const cards = Array.from({ length: count }, () => `
+    <div class="skeleton-card">
+      <div class="skeleton-meta">
+        <span class="skeleton-badge"></span>
+        <span class="skeleton-badge"></span>
+        <span class="skeleton-badge"></span>
+        <div class="skeleton-line"></div>
+      </div>
+      <div class="skeleton-text">
+        <div class="skeleton-line" style="width: 100%"></div>
+        <div class="skeleton-line" style="width: 85%"></div>
+        <div class="skeleton-line" style="width: 60%"></div>
+      </div>
+      <div class="skeleton-actions">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+  `).join("");
+
+  historyList.innerHTML = cards;
+}
+
 function initHistory(user) {
   allTranscriptions = [];
   lastDoc = null;
