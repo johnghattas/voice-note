@@ -429,10 +429,8 @@ body {
 .status-text {
   color: var(--text-secondary);
   font-size: 0.75rem;
-  background: rgba(255, 255, 255, 0.9);
   padding: 2px 10px;
   border-radius: 12px;
-  backdrop-filter: blur(4px);
 }
 
 /* ─── Result Area ─── */
