@@ -1,0 +1,10 @@
+node_modules/
+functions/node_modules/
+functions/.env
+.firebase/
+*.log
+test_gemini.py
+test_vertex.py
+test-page.mjs
+test-page-direct.mjs
+test-screenshot*.png

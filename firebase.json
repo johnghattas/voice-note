@@ -1,0 +1,95 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "**/*.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.css",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/transcribe",
+        "function": {
+          "functionId": "transcribe"
+        }
+      },
+      {
+        "source": "/api/refine",
+        "function": {
+          "functionId": "refine"
+        }
+      },
+      {
+        "source": "/api/to-task",
+        "function": {
+          "functionId": "toTask"
+        }
+      },
+      {
+        "source": "/api/generate-token",
+        "function": {
+          "functionId": "generateToken"
+        }
+      },
+      {
+        "source": "/api/history",
+        "function": {
+          "functionId": "history"
+        }
+      },
+      {
+        "source": "/api/cloud-transcribe",
+        "function": {
+          "functionId": "cloudTranscribe"
+        }
+      },
+      {
+        "source": "/api/vertex/connect",
+        "function": {
+          "functionId": "vertexConnect"
+        }
+      },
+      {
+        "source": "/api/vertex/refresh",
+        "function": {
+          "functionId": "vertexRefresh"
+        }
+      },
+      {
+        "source": "/api/vertex/status",
+        "function": {
+          "functionId": "vertexStatus"
+        }
+      },
+      {
+        "source": "/api/vertex/disconnect",
+        "function": {
+          "functionId": "vertexDisconnect"
+        }
+      },
+      {
+        "source": "/api/vertex/model",
+        "function": {
+          "functionId": "vertexModel"
+        }
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions"
+  }
+}

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoiceNotes</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="app-page">
+  <header class="app-header">
+    <h1>VoiceNotes</h1>
+    <div class="header-actions">
+      <span id="userEmail" class="user-email"></span>
+      <button id="settingsBtn" class="btn btn-small" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button id="logoutBtn" class="btn btn-small">Logout</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="queueSection" class="queue-section hidden">
+      <div class="queue-header">
+        <h3>Recordings</h3>
+        <div class="queue-header-actions">
+          <label class="auto-save-toggle" title="Auto-save completed recordings">
+            <input type="checkbox" id="autoSaveToggle">
+            <span class="auto-save-slider"></span>
+            <span class="auto-save-label">Auto Save</span>
+          </label>
+          <button id="clearDoneBtn" class="btn btn-small hidden">Clear Done</button>
+        </div>
+      </div>
+      <div id="queueList" class="queue-list"></div>
+    </div>
+
+    <section class="history-section">
+      <div class="history-header">
+        <h2>History</h2>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <button id="loadMoreBtn" class="btn btn-small load-more hidden">Load More</button>
+    </section>
+  </main>
+
+  <div class="recorder-bar">
+    <div id="micSelectRow" class="mic-select-row hidden">
+      <div class="mic-select-inner">
+        <select id="micSelect" class="mic-select" title="Choose microphone"></select>
+        <button id="micTestBtn" class="mic-test-btn" title="Test microphone">Test</button>
+      </div>
+      <div class="mic-level-container hidden">
+        <div id="micLevelBar" class="mic-level-bar"></div>
+      </div>
+      <div id="micTestHint" class="mic-test-hint hidden">Speak now to test...</div>
+    </div>
+    <div id="statusText" class="status-text">Tap to record</div>
+    <div class="recording-row hidden" id="recordingRow">
+      <div id="recordingTimer" class="recording-timer">00:00</div>
+      <button id="cancelRecordBtn" class="cancel-record-btn" title="Cancel recording">&times;</button>
+    </div>
+    <div class="recorder-buttons">
+      <button id="translateBtn" class="mic-btn translate-btn" title="Arabic → English">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+        </svg>
+      </button>
+      <button id="micBtn" class="mic-btn" title="Record &amp; Transcribe">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+      <button id="promptBtn" class="mic-btn prompt-btn" title="Generate AI Prompt">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+        </svg>
+      </button>
+      <button id="cleanBtn" class="mic-btn clean-btn" title="Record & Clean Text">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7.5 5.6L10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.996.996 0 0 0-1.41 0L1.29 18.96a.996.996 0 0 0 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.71 11.04a.996.996 0 0 0 0-1.41l-2.34-2.34zM5.21 19.88L4.12 18.8 14.3 8.62l1.08 1.08-10.17 10.18z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="copyToast" class="copy-toast hidden">Copied!</div>
+
+  <div id="historyContextMenu" class="queue-context-menu hidden">
+    <button class="queue-ctx-btn history-ctx-copy">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      Copy
+    </button>
+    <button class="queue-ctx-btn history-ctx-task">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+      To-Do Task
+    </button>
+  </div>
+
+
+  <div id="editModal" class="edit-modal hidden">
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3>Refine with AI</h3>
+        <button id="editModalClose" class="edit-modal-close">&times;</button>
+      </div>
+      <div class="edit-modal-body">
+        <label class="edit-label">Original Text</label>
+        <div id="editOriginalText" class="edit-original-text"></div>
+        <label class="edit-label">What do you want to change?</label>
+        <div class="edit-record-row">
+          <button id="editRecordBtn" class="edit-record-btn" title="Record instructions">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            </svg>
+          </button>
+          <div id="editRecordStatus" class="edit-record-status">Tap to record your edit instructions</div>
+        </div>
+        <div id="editInstructionsPreview" class="edit-instructions-preview hidden"></div>
+        <div id="editResultArea" class="edit-result-area hidden">
+          <label class="edit-label">Refined Text</label>
+          <div id="editResultText" class="edit-result-text"></div>
+          <div class="edit-result-actions">
+            <button id="editAcceptBtn" class="btn btn-primary btn-small">Accept</button>
+            <button id="editCancelBtn" class="btn btn-small">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="edit-modal hidden">
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3>Settings</h3>
+        <button id="settingsModalClose" class="edit-modal-close">&times;</button>
+      </div>
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-settings-tab="desktop">Desktop Connection</button>
+        <button class="settings-tab" data-settings-tab="vertex">Vertex AI</button>
+      </div>
+      <div class="edit-modal-body">
+        <div id="settingsTabDesktop" class="settings-tab-content">
+          <p class="settings-desc">Generate an API token to connect the desktop app. The token lasts forever until you regenerate it.</p>
+          <div id="tokenArea" class="token-area hidden">
+            <label class="edit-label">Your API Token</label>
+            <div class="token-display">
+              <code id="tokenValue" class="token-value"></code>
+              <button id="copyTokenBtn" class="btn btn-small">Copy</button>
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button id="generateTokenBtn" class="btn btn-primary">Generate Token</button>
+            <button id="regenerateTokenBtn" class="btn btn-small btn-danger hidden">Regenerate</button>
+          </div>
+          <p id="tokenWarning" class="token-warning hidden">Regenerating will disconnect any desktop app using the old token.</p>
+        </div>
+
+        <div id="settingsTabVertex" class="settings-tab-content hidden">
+          <div id="vertexStatus" class="vertex-status">
+            <div id="vertexStatusDot" class="vertex-status-dot disconnected"></div>
+            <span id="vertexStatusText">Not connected</span>
+          </div>
+
+          <div id="vertexConnected" class="hidden">
+            <div class="vertex-info-row">
+              <label class="edit-label">Google Account</label>
+              <span id="vertexEmail" class="vertex-info-value"></span>
+            </div>
+            <div class="vertex-info-row">
+              <label class="edit-label">Project ID</label>
+              <span id="vertexProjectDisplay" class="vertex-info-value"></span>
+            </div>
+            <div class="vertex-info-row">
+              <label class="edit-label">Region</label>
+              <span id="vertexRegionDisplay" class="vertex-info-value"></span>
+            </div>
+            <div class="vertex-info-row">
+              <label class="edit-label">Connected</label>
+              <span id="vertexConnectedAt" class="vertex-info-value"></span>
+            </div>
+            <div class="vertex-model-section">
+              <label class="edit-label">AI Model</label>
+              <div class="vertex-model-row">
+                <select id="vertexModelSelect" class="vertex-input">
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</option>
+                  <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                </select>
+                <button id="vertexSaveModelBtn" class="btn btn-primary btn-small">Save</button>
+                <span id="vertexModelSaved" class="vertex-model-saved hidden">Saved!</span>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button id="vertexDisconnectBtn" class="btn btn-small btn-danger">Disconnect</button>
+            </div>
+          </div>
+
+          <div id="vertexSetupForm" class="vertex-setup-form">
+            <p class="settings-desc">Connect your Google Cloud project to use Vertex AI for transcription. Requires a project with the Vertex AI API enabled.</p>
+            <div class="vertex-field">
+              <label class="edit-label" for="vertexProjectId">Project ID</label>
+              <input type="text" id="vertexProjectId" class="vertex-input" placeholder="my-gcloud-project">
+            </div>
+            <div class="vertex-field">
+              <label class="edit-label" for="vertexRegion">Region</label>
+              <select id="vertexRegion" class="vertex-input">
+                <option value="us-central1">us-central1 (Iowa)</option>
+                <option value="us-east4">us-east4 (Virginia)</option>
+                <option value="us-west1">us-west1 (Oregon)</option>
+                <option value="europe-west1">europe-west1 (Belgium)</option>
+                <option value="europe-west4">europe-west4 (Netherlands)</option>
+                <option value="asia-southeast1">asia-southeast1 (Singapore)</option>
+                <option value="asia-northeast1">asia-northeast1 (Tokyo)</option>
+                <option value="me-central1">me-central1 (Doha)</option>
+              </select>
+            </div>
+            <div class="settings-actions">
+              <button id="vertexSignInBtn" class="btn-vertex-signin">
+                <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align: middle; margin-right: 8px;">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                Sign in with Google
+              </button>
+            </div>
+            <p id="vertexError" class="token-warning hidden"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/recorder.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

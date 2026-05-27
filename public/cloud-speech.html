@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoiceNotes - Cloud Speech</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="app-page">
+  <header class="app-header">
+    <h1>VoiceNotes <span style="font-size:0.7em;color:var(--text-secondary)">Cloud</span> <span id="debugToggle" style="font-size:0.4em;color:#555;cursor:pointer" title="Toggle Debug">DBG</span></h1>
+    <div class="header-actions">
+      <span id="userEmail" class="user-email"></span>
+      <a href="/app.html" class="btn btn-small">Full App</a>
+      <a href="/speech.html" class="btn btn-small">Web Speech</a>
+      <button id="logoutBtn" class="btn btn-small">Logout</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div id="resultArea" class="result-area hidden">
+      <div id="transcriptionText" class="transcription-text"></div>
+      <div id="interimText" class="transcription-text" style="color:var(--text-secondary);font-style:italic"></div>
+      <div class="result-actions">
+        <button id="copyResultBtn" class="btn btn-small">Copy</button>
+        <button id="saveBtn" class="btn btn-primary btn-small">Save</button>
+        <button id="discardBtn" class="btn btn-small btn-danger">Discard</button>
+      </div>
+    </div>
+
+    <section class="history-section">
+      <div class="history-header">
+        <h2>History</h2>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <button id="loadMoreBtn" class="btn btn-small load-more hidden">Load More</button>
+    </section>
+  </main>
+
+  <div class="recorder-bar">
+    <div id="statusText" class="status-text">Tap to record</div>
+    <div id="recordingTimer" class="recording-timer hidden">00:00</div>
+    <div class="recorder-buttons">
+      <select id="langSelect" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;background:var(--card-bg)">
+        <option value="ar-EG">Arabic (EG)</option>
+        <option value="mixed">Mixed (AR+EN)</option>
+        <option value="en-US">English</option>
+        <option value="ar-SA">Arabic (SA)</option>
+      </select>
+      <button id="micBtn" class="mic-btn" title="Record">
+        <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="debugPanel" style="position:fixed;bottom:80px;left:0;right:0;max-height:250px;overflow-y:auto;background:#111;color:#0f0;font-size:12px;font-family:monospace;padding:8px;z-index:999;display:none">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <strong>Debug Chunks</strong>
+      <button onclick="document.getElementById('debugPanel').style.display='none'" style="background:none;border:none;color:#f55;cursor:pointer;font-size:14px">X</button>
+    </div>
+    <div id="debugChunks"></div>
+  </div>
+  <div id="copyToast" class="copy-toast hidden">Copied!</div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/cloud-recorder.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

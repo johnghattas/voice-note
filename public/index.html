@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoiceNotes - Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">VoiceNotes</h1>
+    <p class="auth-subtitle">Speech to Text with AI</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Login</button>
+      <button class="auth-tab" data-tab="register">Register</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <input type="email" id="loginEmail" placeholder="Email" required autocomplete="email">
+      <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password">
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <form id="registerForm" class="auth-form hidden">
+      <input type="email" id="registerEmail" placeholder="Email" required autocomplete="email">
+      <input type="password" id="registerPassword" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
+      <input type="password" id="registerConfirm" placeholder="Confirm Password" required minlength="6" autocomplete="new-password">
+      <button type="submit" class="btn btn-primary">Register</button>
+    </form>
+
+    <p id="authError" class="auth-error hidden"></p>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
