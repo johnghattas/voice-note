@@ -957,6 +957,16 @@ body {
   border-radius: 8px;
 }
 
+/* Fade-in transition from skeleton to real content */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.history-list.fade-in .history-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* ─── Copy Toast ─── */
 .copy-toast {
   position: fixed;

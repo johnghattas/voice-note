@@ -147,8 +147,16 @@ function renderHistory() {
     return;
   }
 
+  const wasInitialLoad = isInitialLoad;
   historyList.innerHTML = filtered.map((t) => createCard(t)).join("");
   bindCardEvents();
+
+  if (wasInitialLoad) {
+    historyList.classList.add("fade-in");
+    historyList.addEventListener("animationend", () => {
+      historyList.classList.remove("fade-in");
+    }, { once: true });
+  }
 }
 
 function createCard(t) {
