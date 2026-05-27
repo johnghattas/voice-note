@@ -127,6 +127,11 @@ async function loadPage(user) {
   } catch (err) {
     console.error("Load history error:", err);
     if (isInitialLoad) {
+      if (skeletonMinDisplayTimer) {
+        clearTimeout(skeletonMinDisplayTimer);
+        skeletonMinDisplayTimer = null;
+      }
+      skeletonShownAt = null;
       historyList.innerHTML = "";
       isInitialLoad = false;
     }
