@@ -8,3 +8,6 @@ test_vertex.py
 test-page.mjs
 test-page-direct.mjs
 test-screenshot*.png
+
+# Auto Claude data directory
+.auto-claude/
