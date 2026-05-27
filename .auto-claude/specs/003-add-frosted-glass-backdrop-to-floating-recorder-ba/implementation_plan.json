@@ -1,0 +1,88 @@
+{
+  "feature": "Add frosted-glass backdrop to floating recorder bar",
+  "description": "Add a frosted-glass panel behind the recorder bar to create clear visual separation between the recording controls and scrolling history content beneath them. This is a CSS-only change to the existing .recorder-bar element plus minor cleanup of redundant child styles.",
+  "created_at": "2026-05-27T22:01:23.867Z",
+  "updated_at": "2026-05-28T00:00:00.000Z",
+  "status": "planned",
+  "planStatus": "approved",
+  "workflow_type": "development",
+  "services_involved": [
+    "frontend-css"
+  ],
+  "spec_file": "spec.md",
+  "files_modified": [
+    "public/css/style.css"
+  ],
+  "risk_assessment": "Low risk \u2014 CSS-only changes to a single file. No JavaScript, HTML structure, or functionality changes. The frosted-glass pattern (backdrop-filter + rgba background) is already used by .status-text in this codebase, confirming browser compatibility intent. backdrop-filter has broad support (Chrome 76+, Safari 9+, Firefox 103+, Edge 79+).",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Add frosted-glass backdrop to recorder bar",
+      "description": "Apply frosted-glass background, padding, border-radius, and shadow to the .recorder-bar container so all its children sit on a unified translucent panel. Then clean up the now-redundant frosted-glass styling on .status-text and ensure mobile responsiveness.",
+      "subtasks": [
+        {
+          "id": "1.1",
+          "title": "Add frosted-glass background and panel styling to .recorder-bar",
+          "description": "In public/css/style.css, update the .recorder-bar rule (line ~218) to add frosted-glass panel properties while keeping all existing positioning intact:\n\nADD these properties:\n- background: rgba(255, 255, 255, 0.75)\n- -webkit-backdrop-filter: blur(16px)\n- backdrop-filter: blur(16px)\n- border-radius: 20px\n- padding: 12px 20px\n- border: 1px solid rgba(255, 255, 255, 0.5)\n- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08)\n\nKEEP unchanged:\n- position: fixed\n- bottom: 48px\n- left: 50%\n- transform: translateX(-50%)\n- display: flex\n- flex-direction: column\n- align-items: center\n- gap: 6px\n- z-index: 20",
+          "file": "public/css/style.css",
+          "status": "completed",
+          "notes": "Added frosted-glass properties to .recorder-bar: translucent background, backdrop blur(16px), border-radius 20px, padding 12px 20px, subtle white border, and soft box-shadow. All existing positioning properties preserved. Committed as 31ea23b.",
+          "updated_at": "2026-05-27T22:19:50.955979+00:00"
+        },
+        {
+          "id": "1.2",
+          "title": "Simplify .status-text to remove redundant frosted-glass",
+          "description": "In public/css/style.css, update .status-text (line ~422) to remove its own background and backdrop-filter since these are now provided by the parent .recorder-bar panel:\n\nCHANGE:\n- background: rgba(255,255,255,0.9) \u2192 remove this property entirely\n- backdrop-filter: blur(4px) \u2192 remove this property entirely\n\nKEEP unchanged:\n- color: var(--text-secondary)\n- font-size: 0.75rem\n- padding: 2px 10px\n- border-radius: 12px",
+          "file": "public/css/style.css",
+          "status": "completed",
+          "notes": "Removed background: rgba(255,255,255,0.9) and backdrop-filter: blur(4px) from .status-text. Kept color, font-size, padding, and border-radius unchanged. These visual effects are now inherited from the parent .recorder-bar panel.",
+          "updated_at": "2026-05-27T22:22:26.145815+00:00"
+        },
+        {
+          "id": "1.3",
+          "title": "Add mobile responsiveness for the panel",
+          "description": "In public/css/style.css, add responsive adjustments inside the existing @media (max-width: 480px) block (line ~671):\n\nADD a .recorder-bar rule:\n- padding: 10px 14px\n- border-radius: 16px\n\nAlso add max-width: calc(100vw - 24px) to the BASE .recorder-bar rule (subtask 1.1) to prevent the panel from overflowing on narrow viewports.",
+          "file": "public/css/style.css",
+          "status": "completed",
+          "notes": "Added max-width: calc(100vw - 24px) to base .recorder-bar rule to prevent panel overflow on narrow viewports. Added responsive .recorder-bar rule inside @media (max-width: 480px) with padding: 10px 14px and border-radius: 16px. Changes verified in diff. Awaiting git commit approval.",
+          "updated_at": "2026-05-27T22:26:48.672329+00:00"
+        },
+        {
+          "id": "1.4",
+          "title": "Verify hover/active transforms on child buttons",
+          "description": "Verification-only subtask. Confirm that .mic-btn:hover (transform: scale(1.05)) and .mic-btn:active (transform: scale(0.95)) still work correctly since these are on child elements \u2014 they should not conflict with the parent's translateX(-50%). No code changes expected unless a visual issue is found.",
+          "file": "public/css/style.css",
+          "status": "completed",
+          "notes": "Verified: .mic-btn:hover (scale 1.05) and .mic-btn:active (scale 0.95) are on child elements, completely independent of the parent .recorder-bar's translateX(-50%). CSS transform is not inherited \u2014 parent and child transforms operate in separate coordinate spaces. No conflicts, no code changes needed. All button variants (translate-btn, prompt-btn, clean-btn) confirmed safe.",
+          "updated_at": "2026-05-27T22:27:54.391547+00:00"
+        }
+      ]
+    }
+  ],
+  "final_acceptance": [
+    "Frosted-glass panel visible behind recorder bar on desktop and mobile",
+    "Scrolling history content is visually separated from recorder controls",
+    "Button hover/active states still work correctly",
+    "Panel does not overflow viewport on narrow screens",
+    "No JavaScript or HTML changes required"
+  ],
+  "qa_status": {
+    "status": "approved",
+    "tests_passed": "N/A - CSS-only change, all 5 acceptance criteria verified via code review",
+    "issues": "Minor: .mic-select still has redundant backdrop-filter: blur(4px) - cosmetic only, not blocking"
+  },
+  "qa_signoff": {
+    "status": "approved",
+    "timestamp": "2026-05-28T00:00:00.000Z",
+    "qa_session": 1,
+    "report_file": "qa_report.md",
+    "tests_passed": {
+      "unit": "N/A",
+      "integration": "N/A",
+      "e2e": "N/A"
+    },
+    "acceptance_criteria": "5/5 verified",
+    "verified_by": "qa_agent"
+  },
+  "last_updated": "2026-05-28T00:00:00.000Z"
+}
