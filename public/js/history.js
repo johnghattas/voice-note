@@ -9,6 +9,8 @@ let loading = false;
 let hasMore = true;
 let unsubscribeLive = null;
 let isInitialLoad = false;
+let skeletonShownAt = null;
+let skeletonMinDisplayTimer = null;
 const PAGE_SIZE = 20;
 
 function showSkeletonLoading(count = 5) {
@@ -34,6 +36,7 @@ function showSkeletonLoading(count = 5) {
   `).join("");
 
   historyList.innerHTML = cards;
+  skeletonShownAt = Date.now();
 }
 
 function initHistory(user) {
@@ -138,6 +141,29 @@ loadMoreBtn.addEventListener("click", () => {
 });
 
 function renderHistory() {
+  if (skeletonMinDisplayTimer) {
+    clearTimeout(skeletonMinDisplayTimer);
+    skeletonMinDisplayTimer = null;
+  }
+
+  // Prevent skeleton flash: ensure minimum 300ms display time
+  if (isInitialLoad && skeletonShownAt) {
+    const elapsed = Date.now() - skeletonShownAt;
+    const MIN_DISPLAY_MS = 300;
+    if (elapsed < MIN_DISPLAY_MS) {
+      skeletonMinDisplayTimer = setTimeout(() => {
+        skeletonMinDisplayTimer = null;
+        renderHistory();
+      }, MIN_DISPLAY_MS - elapsed);
+      return;
+    }
+  }
+
+  // Use skeletonShownAt as fallback signal for fade-in since
+  // loadPage() sets isInitialLoad=false after renderHistory() returns
+  const wasInitialLoad = isInitialLoad || !!skeletonShownAt;
+  skeletonShownAt = null;
+
   const filter = searchInput.value.toLowerCase();
   const filtered = filter
     ? allTranscriptions.filter((t) => t.text.toLowerCase().includes(filter))
@@ -151,7 +177,6 @@ function renderHistory() {
     return;
   }
 
-  const wasInitialLoad = isInitialLoad;
   historyList.innerHTML = filtered.map((t) => createCard(t)).join("");
   bindCardEvents();
 
