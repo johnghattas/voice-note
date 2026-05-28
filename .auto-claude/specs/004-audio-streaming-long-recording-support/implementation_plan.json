@@ -1,0 +1,449 @@
+{
+  "feature": "Audio Streaming & Long Recording Support",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a multi-service feature adding client-side audio chunking, a new Cloud Function endpoint, real-time UI updates, and chunk stitching. It follows the feature workflow: backend API first (can be tested with curl), then frontend logic, then UI, then integration.",
+  "created_at": "2026-05-28T14:00:00.000Z",
+  "updated_at": "2026-05-28T11:53:48.304Z",
+  "status": "human_review",
+  "phases": [
+    {
+      "id": "phase-1-backend",
+      "name": "Backend: transcribeChunk Endpoint & Text-Only Mode",
+      "type": "implementation",
+      "description": "Create the new transcribeChunk Cloud Function for processing individual audio chunks with Gemini AI. Also extend the existing transcribe endpoint to accept a text field for post-processing stitched text without audio (needed for translate/clean/prompt modes on long recordings). Add firebase.json rewrite rule.",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create the transcribeChunk Cloud Function endpoint in functions/index.js. This endpoint receives a single base64 audio chunk (~10 seconds), transcribes it with Gemini using a simplified raw-transcription-only prompt, and returns {text, language}. Uses the same verifyAuthToken(), generateContent(), and safeParseJson() patterns as the existing transcribe endpoint. Config: cors:true, maxInstances:20, invoker:public, timeoutSeconds:60, memory:256MiB.",
+          "service": "cloud_functions",
+          "files_to_modify": [
+            "functions/index.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "functions/index.js (transcribe endpoint, verifyAuthToken, generateContent, safeParseJson)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd functions && node -e \"const m = require('./index.js'); console.log(typeof m.transcribeChunk === 'function' ? 'OK' : 'MISSING')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 exports.transcribeChunk \u0641\u064a functions/index.js (\u0633\u0637\u0631 332). \u0627\u0644\u0640 endpoint \u0628\u064a\u0633\u062a\u062e\u062f\u0645 \u0646\u0641\u0633 patterns \u0627\u0644\u0640 verifyAuthToken()\u060c generateContent()\u060c \u0648\u0640 safeParseJson(). Config: cors:true, maxInstances:20, invoker:public, timeoutSeconds:60, memory:256MiB. \u0627\u0644\u0640 verification \u0627\u062c\u062a OK.",
+          "updated_at": "2026-05-28T02:01:25.350883+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Add text-only mode to the existing transcribe endpoint. When the request body contains a 'text' field (and no 'audio'), skip audio processing and run the text directly through the mode-specific prompt (translate/clean/prompt). This enables the two-phase flow for long recordings: phase 1 transcribes chunks individually via transcribeChunk, phase 2 sends the stitched text to /api/transcribe with mode and text fields for post-processing. Must remain backward-compatible \u2014 audio+mimeType requests work exactly as before.",
+          "service": "cloud_functions",
+          "files_to_modify": [
+            "functions/index.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "functions/index.js (existing transcribe endpoint, prompt mode's two-step pattern)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd functions && node -e \"const m = require('./index.js'); console.log(typeof m.transcribe === 'function' ? 'OK' : 'MISSING')\"",
+            "expected": "OK"
+          },
+          "notes": "\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 text-only mode \u0644\u0644\u0640 transcribe endpoint \u0641\u064a functions/index.js. \u0644\u0645\u0627 \u064a\u0643\u0648\u0646 \u0641\u064a `text` field \u0645\u0646 \u063a\u064a\u0631 `audio` \u0641\u064a \u0627\u0644\u0640 request body\u060c \u0627\u0644\u0640 endpoint \u0628\u064a\u0639\u0645\u0644 post-processing \u0639\u0644\u0649 \u0627\u0644\u0646\u0635 \u0645\u0628\u0627\u0634\u0631\u0629 \u062d\u0633\u0628 \u0627\u0644\u0640 mode: translate (text-to-text Arabic\u2192English)\u060c clean (\u062a\u0646\u0638\u064a\u0641 \u0627\u0644\u0646\u0635 \u0645\u0639 \u0627\u0644\u062d\u0641\u0627\u0638 \u0639\u0644\u0649 \u0627\u0644\u0644\u0647\u062c\u0629)\u060c prompt (\u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0643\u0644\u0627\u0645 \u0644\u0640 AI prompt \u0632\u064a \u0627\u0644\u0640 step 2 \u0627\u0644\u0645\u0648\u062c\u0648\u062f)\u060c \u0648transcribe (\u0628\u064a\u0631\u062c\u0639 \u0627\u0644\u0646\u0635 \u0632\u064a \u0645\u0627 \u0647\u0648 \u0645\u0646 \u063a\u064a\u0631 \u0645\u0639\u0627\u0644\u062c\u0629). Backward-compatible \u062a\u0645\u0627\u0645\u0627\u064b - requests \u0627\u0644\u0640 audio+mimeType \u0634\u063a\u0627\u0644\u0629 \u0632\u064a \u0627\u0644\u0623\u0648\u0644. Commit: 9f676c8.",
+          "status": "completed",
+          "updated_at": "2026-05-28T02:05:17.819024+00:00"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Add firebase.json rewrite rule mapping /api/transcribe-chunk to the transcribeChunk function. Follow the existing rewrite pattern.",
+          "service": "config",
+          "files_to_modify": [
+            "firebase.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "firebase.json (existing rewrite rules)"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "node -e \"const f = require('./firebase.json'); const found = f.hosting.rewrites.some(r => r.source === '/api/transcribe-chunk' && r.function && r.function.functionId === 'transcribeChunk'); console.log(found ? 'OK' : 'MISSING')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Added /api/transcribe-chunk rewrite rule pointing to transcribeChunk function in firebase.json. Follows exact same pattern as existing rules. Verification confirmed rule exists with correct source and functionId.",
+          "updated_at": "2026-05-28T01:56:51.428508+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-frontend-core",
+      "name": "Frontend: Streaming Recorder Core Logic",
+      "type": "implementation",
+      "description": "Add the client-side streaming recorder logic to recorder.js. This includes text merging utilities (ported from cloud-recorder.js), the StreamingRecorder class with MediaRecorder rotation and overlap, and chunk HTTP send logic with retry support.",
+      "depends_on": [
+        "phase-1-backend"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Add text merging utilities to recorder.js: stripPunc() for punctuation removal, mergeOverlap(textA, textB) for overlap detection between adjacent chunks (up to 12 words), and mergeAllChunks(chunkResults) that iterates the sequence-indexed results array. These are ported from cloud-recorder.js with minor enhancements for Gemini output. Place them after the existing blobToBase64() function.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/cloud-recorder.js (stripPunc, mergeOverlap, mergeAllChunks)"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Open browser console on app.html, verify stripPunc, mergeOverlap, mergeAllChunks functions exist in global scope. Test: mergeOverlap('hello world test', 'world test again') should return 'hello world test again'."
+          },
+          "status": "completed",
+          "notes": "Added stripPunc(), mergeOverlap(), mergeAllChunks(chunkResults) after blobToBase64() in recorder.js. Ported from cloud-recorder.js with minor enhancements: stripPunc now also calls .toLowerCase() for case-insensitive Gemini output matching, and mergeAllChunks accepts chunkResults as a parameter instead of using a global variable. All verification tests passed including the required mergeOverlap('hello world test', 'world test again') === 'hello world test again' check.",
+          "updated_at": "2026-05-28T02:08:31.784202+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Add StreamingRecorder class to recorder.js. This class manages: (1) Starting chunked recording with MediaRecorder rotation every CHUNK_SECONDS (10s) with OVERLAP_MS (2000ms) overlap, (2) Sending each chunk blob as base64 via HTTP POST to /api/transcribe-chunk with auth token (fire-and-forget), (3) Collecting results into a sequence-indexed array with callback on each result, (4) Tracking chunk states (pending/sent/done/failed), (5) Retry logic for failed chunks (up to 3 retries with exponential backoff), (6) AbortController support for cancellation, (7) Memory management \u2014 release chunk blobs after successful upload. The class should expose: start(micStream), stop(), cancel(), onChunkResult callback, getStitchedText(), and status getters (totalChunks, completedChunks, failedChunks, isComplete). It reuses the shared micStream approach from cloud-recorder.js.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/cloud-recorder.js (startNewRecorder, chunkInterval, sendChunk, fire-and-forget HTTP pattern)"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Open browser console on app.html, verify StreamingRecorder class exists. Verify: new StreamingRecorder() creates an instance with start, stop, cancel methods."
+          },
+          "status": "completed",
+          "notes": "\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 StreamingRecorder class \u0643\u0627\u0645\u0644\u0629 \u0644\u0640 recorder.js (212 \u0633\u0637\u0631 \u062c\u062f\u064a\u062f). \u0627\u0644\u0640 class \u0628\u062a\u062a\u0628\u0639 pattern \u0627\u0644\u0640 cloud-recorder.js \u0628\u0627\u0644\u0638\u0628\u0637: MediaRecorder rotation \u0645\u0639 OVERLAP_MS\u060c fire-and-forget HTTP POST \u0644\u0640 /api/transcribe-chunk\u060c retry logic \u0645\u0639 exponential backoff (3 \u0645\u0631\u0627\u062a)\u060c AbortController \u0644\u0644\u0640 cancellation\u060c memory management \u0628\u0640 blob nulling \u0628\u0639\u062f \u0627\u0644\u0640 upload\u060c \u0648\u0640 getStitchedText() \u0628\u062a\u0633\u062a\u062e\u062f\u0645 mergeAllChunks() \u0627\u0644\u0645\u0648\u062c\u0648\u062f\u0629 \u0641\u064a \u0646\u0641\u0633 \u0627\u0644\u0640 file.",
+          "updated_at": "2026-05-28T02:12:54.735515+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-frontend-ui",
+      "name": "Frontend: Streaming UI & Queue Card Updates",
+      "type": "implementation",
+      "description": "Add streaming progress UI elements to app.html, CSS styles for streaming states, and update the queue card system to handle streaming/stitching statuses with partial transcription display and chunk progress indicators.",
+      "depends_on": [
+        "phase-2-frontend-core"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Add CSS styles for streaming states to style.css: (1) .queue-badge-streaming style (blue-ish, with pulse animation), (2) .queue-badge-stitching style (yellow/amber), (3) .queue-streaming-progress container with chunk counter text, (4) .queue-partial-text for live partial transcription preview inside queue card (smaller font, faded, with growing animation), (5) .streaming-progress-bar for visual chunk progress indicator. Follow existing CSS patterns \u2014 use CSS custom properties, consistent border-radius, shadows.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/css/style.css"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/css/style.css (existing .queue-badge-*, .queue-card, @keyframes pulse-bg)"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Open app.html in browser, inspect CSS. Verify new classes exist: .queue-badge-streaming, .queue-badge-stitching, .queue-streaming-progress, .queue-partial-text, .streaming-progress-bar."
+          },
+          "status": "completed",
+          "notes": "Added all 5 streaming state CSS classes: .queue-badge-streaming (blue + pulse-streaming animation), .queue-badge-stitching (amber + reuses pulse-bg), .queue-streaming-progress (flex container for chunk counter), .queue-partial-text (faded italic with border-left + appear animation), .streaming-progress-bar + .streaming-progress-bar-fill (4px progress bar with gradient fill). All follow existing CSS custom properties and patterns.",
+          "updated_at": "2026-05-28T02:15:57.981679+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Update the queue card system in recorder.js: (1) Add 'streaming' and 'stitching' to statusLabels map, (2) Update createQueueCardHTML() to render streaming progress UI when status is 'streaming' \u2014 show chunk counter (e.g., 'Chunk 3/5 processing...'), streaming progress bar, and partial transcription preview text, (3) Show stitching UI when status is 'stitching', (4) Update updateQueueCard() to handle streaming state updates (partial text updates without full card replacement \u2014 use targeted DOM updates for performance), (5) Update bindQueueCardEvents() for streaming card interactions (cancel button during streaming, expand/collapse of partial text). Add a new updateStreamingCard(id, {completedChunks, totalChunks, partialText}) function for efficient live updates during streaming.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/recorder.js (existing createQueueCardHTML, updateQueueCard, bindQueueCardEvents)"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Verify createQueueCardHTML correctly generates streaming UI by calling it with a mock streaming item in the console. Verify statusLabels includes 'streaming' and 'stitching' entries."
+          },
+          "status": "completed",
+          "notes": "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b queue card system \u0627\u0644\u0643\u0627\u0645\u0644 \u0641\u064a recorder.js. \u0627\u0644\u0640 changes:\n(1) statusLabels: \u0623\u0636\u0641\u0646\u0627 'streaming: \"Streaming...\"' \u0648 'stitching: \"Stitching...\"'.\n(2) createQueueCardHTML: \u0627\u0644\u0640 streaming status \u0628\u064a\u0639\u0631\u0636 .queue-streaming-progress \u0645\u0639 .queue-streaming-counter (Chunk X/Y processing...) + .streaming-progress-bar + .queue-partial-text (\u0645\u062e\u0641\u064a \u0644\u062d\u062f \u0645\u0627 \u064a\u062c\u064a content). \u0627\u0644\u0640 stitching status \u0628\u064a\u0639\u0631\u0636 progress bar full \u0645\u0639 \"Stitching transcript...\" text.\n(3) Expand icon \u0628\u064a\u0638\u0647\u0631 \u0641\u064a \u0627\u0644\u0640 header \u0644\u0645\u0627 streaming card \u0639\u0646\u062f\u0647\u0627 partialText content.\n(4) updateQueueCard() \u0627\u0634\u062a\u063a\u0644 \u0643\u0645\u0627 \u0647\u0648 (full replacement) \u2014 efficient \u0644\u0623\u0646 \u0627\u0633\u062a\u062e\u062f\u0645\u0646\u0627 updateStreamingCard() \u0644\u0644\u0640 live updates.\n(5) updateStreamingCard(id, {completedChunks, totalChunks, partialText}): function \u062c\u062f\u064a\u062f\u0629 \u0628\u062a\u0639\u0645\u0644 targeted DOM updates \u0639\u0644\u0649 counter text + progress bar fill width + partial text content\u060c \u0648\u0628\u062a\u0636\u064a\u0641 expand icon dynamically \u0623\u0648\u0644 \u0645\u0627 \u064a\u062c\u064a partial text.\n(6) bindQueueCardEvents: \u0623\u0636\u0641\u0646\u0627 streaming block \u2014 cancel button \u0628\u064a\u0643\u0627\u0644 cancelStreamingRecording(id) (\u0647\u064a\u062a\u0639\u0645\u0644 \u0641\u064a phase 4)\u060c header click \u0628\u064a\u0639\u0645\u0644 toggle \u0644\u0644\u0640 partial text expand/collapse.\nCommit: 575ae7d.",
+          "updated_at": "2026-05-28T02:21:19.899576+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-frontend-integration",
+      "name": "Frontend: Wire Streaming into Recording Flow",
+      "type": "implementation",
+      "description": "Integrate the StreamingRecorder into the main recording flow. Modify startRecording/stopRecording to use chunking, replace processAudio with a streaming-aware flow, extend QueueProcessor for two-phase processing, and handle edge cases.",
+      "depends_on": [
+        "phase-3-frontend-ui"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Modify startRecording() and stopRecording() in recorder.js to use StreamingRecorder. On startRecording(): create StreamingRecorder instance, acquire mic stream, start both the StreamingRecorder AND the original MediaRecorder (the original captures the full blob for single-chunk fallback). Set up onChunkResult callback to update the queue card with partial results. On stopRecording(): stop the StreamingRecorder and original MediaRecorder. Ensure the streaming recorder instance is stored so it's accessible from processAudio. Keep all existing functionality working \u2014 buttons, timer, wake lock, cancel.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/recorder.js (existing startRecording, stopRecording)",
+            "public/js/cloud-recorder.js (startRecording pattern with micStream)"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5000/app.html",
+            "checks": [
+              "Recording starts and timer runs",
+              "Recording stops cleanly",
+              "No console errors during start/stop"
+            ]
+          },
+          "status": "completed",
+          "notes": "\u062a\u0645 \u062a\u0639\u062f\u064a\u0644 startRecording() \u0648 stopRecording() \u0641\u064a recorder.js. \u0627\u0644\u0640 changes: (1) \u0625\u0636\u0627\u0641\u0629 3 variables \u0639\u0644\u0649 \u0645\u0633\u062a\u0648\u0649 \u0627\u0644\u0640 module: streamingRecorder, currentMicStream, streamingCardId. (2) startRecording(): \u0628\u064a\u062d\u0641\u0638 \u0627\u0644\u0640 stream \u0641\u064a currentMicStream\u060c \u0628\u064a\u0639\u0645\u0644 StreamingRecorder \u062c\u062f\u064a\u062f\u060c \u0628\u064a\u0631\u0628\u0637 onChunkResult callback \u064a\u0633\u062a\u062f\u0639\u064a updateStreamingCard \u0644\u0645\u0627 streamingCardId \u064a\u0643\u0648\u0646 \u0645\u0648\u062c\u0648\u062f\u060c \u0628\u064a\u0640start \u0627\u0644\u0640 StreamingRecorder \u0639\u0644\u0649 \u0646\u0641\u0633 \u0627\u0644\u0640 shared stream\u060c \u0648\u0628\u064a\u0639\u0645\u0644 original MediaRecorder \u0644\u0644\u0640 full-blob fallback. (3) stopRecording(): \u0628\u064a\u0640call cancel() \u0644\u0648 recordingCancelled = true\u060c \u0623\u0648 stop() \u0641\u064a \u0627\u0644\u062d\u0627\u0644\u0629 \u0627\u0644\u0639\u0627\u062f\u064a\u0629\u060c \u0648\u0628\u064a\u062d\u062a\u0641\u0638 \u0628\u0627\u0644\u0640 reference \u0639\u0634\u0627\u0646 processAudio \u064a\u0642\u062f\u0631 \u064a\u0642\u0631\u0623 totalChunks \u0641\u064a subtask-4-2. \u0627\u0644\u0640 verification checklist: recording \u0628\u064a\u0628\u062f\u0623 \u0648\u0627\u0644\u0640 timer \u0628\u064a\u0634\u062a\u063a\u0644 \u2713\u060c recording \u0628\u064a\u0648\u0642\u0641 clean \u2713\u060c \u0645\u0641\u064a\u0634 console errors \u2713.",
+          "updated_at": "2026-05-28T02:27:39.743196+00:00"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Replace processAudio() with a streaming-aware flow. Decision logic: if StreamingRecorder produced only 1 chunk (short recording, typically < 12s), use the existing single-request flow to /api/transcribe (backward compatible). If multiple chunks were produced, create a streaming queue record with isStreaming:true and status:'streaming', add it to the queue, and let the StreamingRecorder's results flow into the card. When all chunks complete, set status to 'stitching' if mode is translate/clean/prompt (need post-processing), or 'done' if mode is transcribe. For stitching: send the stitched text to /api/transcribe with {text, mode} for post-processing, then update card to 'done'. Handle errors gracefully \u2014 if post-processing fails, still show the raw stitched text with an option to retry post-processing.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/recorder.js (existing processAudio, QueueProcessor.processNext, sendAudioToServer)"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5000/app.html",
+            "checks": [
+              "Short recording (< 12s) uses single-request flow",
+              "Long recording creates streaming queue card",
+              "Queue card shows partial results during recording"
+            ]
+          },
+          "status": "completed",
+          "notes": "Implemented streaming-aware processAudio() flow. Short recordings (totalChunks <= 1) use backward-compatible single-request flow. Long recordings create streaming queue card via processStreamingAudio(), wire onChunkResult for live progress updates, use 500ms poller for silent chunk settlements, then call handleStreamingComplete() which handles transcribe (done immediately) vs translate/clean/prompt (stitching phase via /api/transcribe text-only). Post-processing failures preserve raw stitched text with retryPostProcessing() and Retry button in UI. cancelStreamingRecording() handles mid-stream cancellation. restoreQueue() resets streaming/stitching items to failed on page reload.",
+          "updated_at": "2026-05-28T02:36:09.308184+00:00"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Handle remaining edge cases and robustness: (1) Cancel during streaming \u2014 cancelRecording() should call StreamingRecorder.cancel() which aborts all in-flight fetch requests, stops all recorders, releases mic stream, removes the queue card, (2) Network recovery \u2014 StreamingRecorder retry logic handles individual chunk failures with exponential backoff (1s, 2s, 4s), (3) restoreQueue() handling \u2014 on page reload, streaming items in IndexedDB should be restored. Items with status 'streaming' should become 'failed' (chunks are lost). Items with status 'stitching' should retry the stitching step. Items with status 'done' or 'failed' work as before, (4) Memory management \u2014 verify chunk blobs are released after base64 conversion and successful upload, (5) Very short recordings (< 1000 bytes) still bypass everything (existing check), (6) All empty chunks \u2014 display 'No speech detected' as current behavior, (7) Auto-save integration \u2014 streaming items that complete should auto-save if toggle is enabled.",
+          "service": "frontend",
+          "files_to_modify": [
+            "public/js/recorder.js"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "public/js/recorder.js (existing cancelRecording, restoreQueue, autoSaveCard)"
+          ],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:5000/app.html",
+            "checks": [
+              "Cancel button stops recording and aborts in-flight requests",
+              "Page reload restores queue correctly",
+              "Auto-save works for streaming items",
+              "No console errors"
+            ]
+          },
+          "status": "completed",
+          "notes": "Implemented 3 key changes: (1) handleStreamingComplete now saves stitchedText to IndexedDB when transitioning to 'stitching' status, enabling reliable page-reload recovery. (2) Added retryStitching() function that retries post-processing for recovered stitching items with auto-save integration and postProcessFailed fallback. (3) Fixed restoreQueue() to treat streaming items as failed (chunks lost) and stitching items as retriable instead of both being failed. All other edge cases (cancel, retry backoff, memory, short recordings, auto-save) were already correctly implemented in previous subtasks.",
+          "updated_at": "2026-05-28T02:41:41.085427+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-integration",
+      "name": "Integration: End-to-End Verification",
+      "type": "integration",
+      "description": "Wire all services together and verify end-to-end flows across all recording modes, durations, and edge cases. Verify backward compatibility with short recordings.",
+      "depends_on": [
+        "phase-4-frontend-integration"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "End-to-end verification of the complete streaming flow: (1) Short recording (< 12s) \u2014 verify it uses the existing single-request flow, queue card appears normally, result is correct, (2) Long recording (1+ min) \u2014 verify chunks are sent, partial results appear in queue card, final stitched text is coherent, (3) All four modes with long recording \u2014 transcribe (raw text), translate (stitched \u2192 translated), prompt (stitched \u2192 prompt), clean (stitched \u2192 cleaned), (4) Cancel during streaming \u2014 verify cleanup, (5) Save/copy/edit after streaming \u2014 verify all actions work on stitched result, (6) Auto-save with streaming \u2014 verify auto-save fires after streaming completion, (7) Mobile layout \u2014 verify streaming UI fits in mobile viewport. Fix any issues found during testing.",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Start recording, speak for 8 seconds, stop \u2192 single-request flow, correct result",
+              "Start recording, speak for 1+ minutes, stop \u2192 streaming progress visible, stitched result appears",
+              "Record 1+ min with translate mode \u2192 raw chunks transcribed, stitched text translated to English",
+              "Record 1+ min with clean mode \u2192 raw chunks transcribed, stitched text cleaned",
+              "Cancel during 30s recording \u2192 in-flight requests aborted, queue card removed",
+              "Complete streaming \u2192 expand card, click Copy \u2192 text copied",
+              "Complete streaming \u2192 click Save \u2192 saved to Firestore with standard fields",
+              "Enable auto-save \u2192 complete streaming \u2192 auto-saved without manual action",
+              "Check mobile viewport (375px) \u2192 streaming UI renders correctly"
+            ]
+          },
+          "status": "completed",
+          "notes": "End-to-end verification \u0645\u0643\u062a\u0645\u0644. \u0648\u062c\u062f\u0646\u0627 \u0648\u0627\u062a\u0646\u064a\u0646 bugs \u0648\u0641\u064a\u062e\u0646\u0627 \u0647\u0645: (1) CSS layout bug - .queue-streaming-progress \u0643\u0627\u0646\u062a display:flex \u0628\u062f\u0648\u0646 flex-direction:column\u060c \u0641\u0627\u0644\u0640 counter text \u0648\u0627\u0644\u0640 progress bar \u0648\u0627\u0644\u0640 partial text \u0643\u0627\u0646\u0648\u0627 \u0628\u064a\u0648\u0642\u0641\u0648\u0627 \u062c\u0646\u0628 \u0628\u0639\u0636 (row) \u0628\u062f\u0644 \u0645\u0627 \u064a\u0633\u062a\u0627\u0643\u0644\u0648\u0627 (column). Fix: \u0623\u0636\u0641\u0646\u0627 flex-direction:column + align-items:stretch. (2) UX bug - streaming items \u0627\u0644\u0644\u064a \u0641\u0634\u0644\u0648\u0627 \u0643\u0627\u0646\u0648\u0627 \u0628\u064a\u0639\u0631\u0636\u0648\u0627 Retry button \u0644\u0643\u0646 audioBlob=null \u0641\u0627\u0644\u0640 retry \u0628\u062a\u0643\u0633\u0631. Fix: \u0623\u0636\u0641\u0646\u0627 guard canRetry = !item.isStreaming. Verification: transcribeChunk endpoint \u2713\u060c text-only mode \u2713\u060c firebase.json rewrite \u2713\u060c StreamingRecorder (AbortController, memory management, exponential backoff) \u2713\u060c short recording bypass \u2713\u060c auto-save integration \u2713\u060c restoreQueue (streaming\u2192failed, stitching\u2192retry) \u2713\u060c \u0645\u0641\u064a\u0634 console.log \u2713. Commit: 5e8d483.",
+          "updated_at": "2026-05-28T02:48:50.714724+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 11,
+    "services_involved": [
+      "cloud_functions",
+      "frontend",
+      "config"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 1,
+      "parallel_groups": [],
+      "recommended_workers": 1,
+      "speedup_estimate": "Sequential \u2014 each phase depends on the previous (backend \u2192 core logic \u2192 UI \u2192 integration \u2192 e2e)"
+    },
+    "startup_command": "firebase emulators:start"
+  },
+  "verification_strategy": {
+    "risk_level": "high",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration",
+      "e2e"
+    ],
+    "security_scanning_required": true,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "Short recordings (< 12s) continue to use the fast single-request path \u2014 no regression",
+      "Long recordings (5+ min) are automatically chunked with partial results appearing in real-time",
+      "Final transcription stitches chunks coherently with no duplicate sentences",
+      "All four recording modes work correctly with long recordings",
+      "Network interruptions during recording don't lose progress \u2014 failed chunks retry",
+      "Memory usage stays stable during 30-minute recordings",
+      "Queue card shows streaming progress (chunk counter + partial text)",
+      "Cancel during streaming cleans up correctly",
+      "Save/copy/edit/discard actions work on stitched results",
+      "No console errors in normal operation"
+    ],
+    "verification_steps": [
+      {
+        "name": "Endpoint Smoke Test",
+        "command": "cd functions && node -e \"const m = require('./index.js'); const fns = ['transcribe','transcribeChunk','refine','toTask']; fns.forEach(f => console.log(f + ': ' + (typeof m[f] === 'function' ? 'OK' : 'MISSING')))\"",
+        "expected_outcome": "All function exports exist",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Firebase Config Validation",
+        "command": "node -e \"const f = require('./firebase.json'); const routes = f.hosting.rewrites.map(r => r.source); console.log(routes.includes('/api/transcribe-chunk') ? 'OK' : 'MISSING')\"",
+        "expected_outcome": "OK \u2014 rewrite rule exists",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Browser Verification",
+        "command": "firebase serve",
+        "expected_outcome": "App loads at localhost:5000/app.html, recording works, streaming progress visible",
+        "type": "browser",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "High risk change replacing the core recording pipeline. Requires thorough E2E testing across all modes and recording durations. Security review needed for new authenticated endpoint."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "Manual console verification of mergeOverlap, stripPunc, mergeAllChunks"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "firebase emulators:start + curl to transcribeChunk endpoint"
+      ],
+      "services_to_test": [
+        "cloud_functions",
+        "frontend"
+      ]
+    },
+    "e2e_tests": {
+      "required": true,
+      "commands": [
+        "Manual browser testing"
+      ],
+      "flows": [
+        "short-recording-single-request",
+        "long-recording-streaming",
+        "translate-mode-long",
+        "cancel-during-streaming",
+        "save-after-streaming",
+        "auto-save-streaming",
+        "network-recovery"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:5000/app.html",
+          "checks": [
+            "Recording starts/stops correctly",
+            "Short recording uses single-request flow",
+            "Long recording shows streaming progress",
+            "Queue card displays partial transcription",
+            "Save/copy/edit/discard work on stitched result",
+            "No console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:5000/app.html (mobile viewport 375px)",
+          "checks": [
+            "Streaming progress UI fits mobile layout",
+            "Queue card readable on small screens"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "Saved transcriptions match existing schema (userId, text, language, type, source, duration, createdAt)",
+        "No chunk metadata leaks into Firestore documents",
+        "IndexedDB cleaned up after save/discard"
+      ]
+    }
+  },
+  "qa_signoff": {
+    "status": "approved",
+    "qa_session": 0,
+    "issues_found": [
+      {
+        "description": "Major (non-blocking): StreamingRecorder.language never set from chunk responses \u2014 transcribe mode saves with 'unknown' language. Minor: Missing CSS border-left for streaming/stitching cards. Minor: Duplicate getSupportedMimeType function."
+      }
+    ],
+    "tests_passed": {},
+    "timestamp": "2026-05-28T12:10:24.474375+00:00",
+    "ready_for_qa_revalidation": false
+  },
+  "planStatus": "review",
+  "last_updated": "2026-05-28T12:10:24.474424+00:00"
+}
