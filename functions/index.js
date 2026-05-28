@@ -110,11 +110,17 @@ async function callVertexAI(vertexConfig, contents, generationConfig) {
   return text.trim();
 }
 
-async function generateContent(uid, contents, generationConfig = { maxOutputTokens: 16384 }) {
-  const vertexConfig = await getVertexAccessToken(uid);
-
-  if (vertexConfig) {
-    return await callVertexAI(vertexConfig, contents, generationConfig);
+async function generateContent(uid, contents, generationConfig = { maxOutputTokens: 16384 }, options = {}) {
+  if (!options.skipVertex) {
+    const vertexConfig = await getVertexAccessToken(uid);
+    if (vertexConfig) {
+      try {
+        return await callVertexAI(vertexConfig, contents, generationConfig);
+      } catch (err) {
+        console.warn("Vertex AI failed, falling back to Gemini API key:", err.message);
+        // Fall through to Gemini API key fallback
+      }
+    }
   }
 
   const modelName = "gemini-2.5-flash";
@@ -474,7 +480,10 @@ If the audio is empty, unclear, corrupted, or contains no detectable speech, ret
       { parts: [{ inlineData: { mimeType, data: audio } }, { text: prompt }] },
     ];
 
-    const responseText = await generateContent(uid, contents);
+    // Skip Vertex AI for chunk transcription — use Gemini API key directly.
+    // Chunks are high-frequency, latency-sensitive operations; Vertex AI adds
+    // overhead and quota pressure. Gemini API key is simpler and more reliable here.
+    const responseText = await generateContent(uid, contents, { maxOutputTokens: 8192 }, { skipVertex: true });
     const parsed = safeParseJson(responseText);
     res.json(parsed);
   } catch (err) {
