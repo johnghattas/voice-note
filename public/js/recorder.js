@@ -482,38 +482,6 @@ function blobToBase64(blob) {
   });
 }
 
-function stripPunc(w) {
-  return w.replace(/[.,،؟?!:;؛""''`]/g, "").toLowerCase();
-}
-
-function mergeOverlap(textA, textB) {
-  const wordsA = textA.split(/\s+/);
-  const wordsB = textB.split(/\s+/);
-  const maxCheck = Math.min(wordsA.length, wordsB.length, 12);
-
-  for (let n = maxCheck; n >= 2; n--) {
-    const suffixA = wordsA.slice(-n).map(stripPunc).join(" ");
-    const prefixB = wordsB.slice(0, n).map(stripPunc).join(" ");
-    if (suffixA === prefixB) {
-      return wordsA.slice(0, -n).join(" ") + " " + wordsB.join(" ");
-    }
-  }
-  return textA + " " + textB;
-}
-
-function mergeAllChunks(chunkResults) {
-  let merged = "";
-  for (let i = 0; i < chunkResults.length; i++) {
-    if (!chunkResults[i]) continue;
-    if (!merged) {
-      merged = chunkResults[i];
-    } else {
-      merged = mergeOverlap(merged, chunkResults[i]);
-    }
-  }
-  return merged.trim();
-}
-
 async function sendAudioToServer({ audioBlob, mimeType, isRefining, refineText, refineType, recordingMode }) {
   const base64 = await blobToBase64(audioBlob);
   const token = await currentUser.getIdToken();
