@@ -10,10 +10,6 @@ let recordingCancelled = false;
 let notificationAudioCtx = null;
 let selectedMicId = localStorage.getItem("voicenotes_micId") || "";
 
-let streamingRecorder = null;
-let currentMicStream = null;
-let streamingCardId = null;
-
 function playNotificationSound(type) {
   try {
     if (!notificationAudioCtx) {
@@ -363,22 +359,6 @@ cleanBtn.addEventListener("click", () => {
 async function startRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints() });
-    currentMicStream = stream;
-    streamingCardId = null;
-
-    // Start StreamingRecorder on the shared mic stream for chunk-based transcription
-    streamingRecorder = new StreamingRecorder();
-    streamingRecorder.onChunkResult = (seq, text) => {
-      if (streamingCardId == null) return;
-      updateStreamingCard(streamingCardId, {
-        completedChunks: streamingRecorder.completedChunks,
-        totalChunks: streamingRecorder.totalChunks,
-        partialText: streamingRecorder.getStitchedText(),
-      });
-    };
-    streamingRecorder.start(stream);
-
-    // Original MediaRecorder captures the full blob for single-chunk fallback
     mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
     audioChunks = [];
 
@@ -388,7 +368,6 @@ async function startRecording() {
 
     mediaRecorder.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
-      currentMicStream = null;
       if (!recordingCancelled) processAudio();
       recordingCancelled = false;
     };
@@ -419,15 +398,6 @@ async function startRecording() {
 }
 
 function stopRecording() {
-  if (streamingRecorder) {
-    if (recordingCancelled) {
-      streamingRecorder.cancel();
-    } else {
-      streamingRecorder.stop();
-    }
-    // Keep reference — processAudio reads totalChunks to decide single vs. multi-chunk flow
-  }
-
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
     mediaRecorder.stop();
   }
