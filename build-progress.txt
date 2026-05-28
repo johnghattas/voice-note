@@ -1,0 +1,59 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: VoiceNotes — Spec 007: Pagination (Infinite Scroll Redesign)
+Workspace: main branch (orchestrator manages worktrees)
+Started: 2026-05-28
+
+Workflow Type: feature
+Rationale: Self-contained UI/UX improvement replacing button-based pagination with
+           IntersectionObserver infinite scroll. Single frontend service (3 files).
+           No backend or Firestore query changes required.
+
+Session 1 (Planner):
+  STATUS: COMPLETE
+  - Investigated codebase (app.html, history.js, style.css)
+  - Documented existing loadMoreBtn pattern (lines 3, 93, 110, 112, 136, 139 in history.js)
+  - Documented existing .load-more CSS rule (style.css lines 877-880)
+  - Updated project_index.json with frontend service details
+  - Updated context.json with investigation findings and exact line refs
+  - Created implementation_plan.json (4 phases, 4 subtasks)
+  - Created init.sh (static server startup for spec development)
+
+Phase Summary:
+  Phase 1 (CSS):          1 subtask  | deps: none          | parallel-safe: YES
+  Phase 2 (HTML):         1 subtask  | deps: none          | parallel-safe: YES
+  Phase 3 (JS):           1 subtask  | deps: phase-1+2     | parallel-safe: NO
+  Phase 4 (Integration):  1 subtask  | deps: phase-3       | parallel-safe: NO
+
+Services Involved:
+  - frontend (public/): Main SPA. Vanilla JS + HTML + CSS + Firebase Compat SDK.
+
+Parallelism Analysis:
+  - Max parallel phases: 2 (phase-1-css + phase-2-html can run simultaneously)
+  - Recommended workers: 1 (sequential is cleaner for this 3-file change)
+  - Parallel group: phase-1-css || phase-2-html (different files, no deps)
+
+Files to be Changed:
+  1. public/css/style.css   — Remove .load-more, add .load-more-sentinel + .sentinel-spinner + @keyframes spinnerRotate
+  2. public/app.html        — Remove <button id="loadMoreBtn">, add <div id="loadMoreSentinel">
+  3. public/js/history.js   — Remove loadMoreBtn const + click listener; add scrollObserver, sentinel ref,
+                              showSentinelSpinner(), clearSentinelSpinner(); update initHistory() and loadPage()
+
+Key Implementation Notes:
+  - rootMargin: '0px 0px 120px 0px' fires observer before user hits recorder-bar wall
+  - scrollObserver.disconnect() in initHistory() prevents dangling observers on re-auth
+  - loadPage() 'loading' boolean guard must remain (observer can fire multiple times rapidly)
+  - Firestore cursor logic (lastDoc, startAfter, PAGE_SIZE=20) unchanged entirely
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 007 --parallel 1
+
+To start the dev server manually (Windows PowerShell):
+
+  npx serve public -p 5000
+  # then open: http://localhost:5000/app.html
+
+=== END SESSION 1 ===
