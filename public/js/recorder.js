@@ -15,6 +15,9 @@ let currentMicStream = null;
 let streamingCardId = null;
 let streamingCompletionPoller = null;
 
+// Registry: cardId → StreamingRecorder instance (kept alive so failed chunks can be retried)
+const streamingRecorderRegistry = new Map();
+
 function playNotificationSound(type) {
   try {
     if (!notificationAudioCtx) {
@@ -579,6 +582,11 @@ async function processStreamingAudio() {
 async function handleStreamingComplete(id, sr, mode) {
   const stitchedText = sr.getStitchedText();
 
+  // If there are failed chunks whose blobs are still in memory, register sr for retry
+  if (sr.hasRetryableChunks) {
+    streamingRecorderRegistry.set(id, sr);
+  }
+
   if (!stitchedText.trim()) {
     await PendingAudioStore.update(id, { status: "failed", error: "No text produced from recording" });
     updateQueueCard(id, "failed");
@@ -766,9 +774,63 @@ function cancelStreamingRecording(id) {
     streamingRecorder = null;
     streamingCardId = null;
   }
+  streamingRecorderRegistry.delete(id);
   PendingAudioStore.update(id, { status: "failed", error: "Cancelled by user" }).then(() => {
     updateQueueCard(id, "failed");
   });
+}
+
+// Retry failed chunks for a streaming card whose StreamingRecorder is still in the registry.
+async function retryFailedChunksInStreamer(id) {
+  const sr = streamingRecorderRegistry.get(id);
+  if (!sr) {
+    statusText.textContent = "Retry unavailable — please re-record.";
+    return;
+  }
+
+  let item;
+  try { item = await PendingAudioStore.get(id); } catch { return; }
+  if (!item) return;
+
+  const retried = sr.retryFailedChunks();
+  if (retried === 0) {
+    statusText.textContent = "No retryable chunks found.";
+    return;
+  }
+
+  // Put the card back in streaming state
+  await PendingAudioStore.update(id, {
+    status: "streaming",
+    completedChunks: sr.completedChunks,
+    totalChunks: sr.totalChunks,
+    partialText: sr.getStitchedText(),
+  });
+  await updateQueueCard(id, "streaming");
+
+  const mode = item.recordingMode;
+  let completionHandled = false;
+
+  function tryRetryComplete() {
+    if (completionHandled || !sr.isComplete) return;
+    completionHandled = true;
+    clearInterval(retryPoller);
+    // If still retryable after this round, registry update happens inside handleStreamingComplete
+    streamingRecorderRegistry.delete(id);
+    handleStreamingComplete(id, sr, mode);
+  }
+
+  const retryPoller = setInterval(tryRetryComplete, 500);
+
+  sr.onChunkResult = (seq, text) => {
+    updateStreamingCard(id, {
+      completedChunks: sr.completedChunks,
+      totalChunks: sr.totalChunks,
+      partialText: sr.getStitchedText(),
+    });
+    tryRetryComplete();
+  };
+
+  statusText.textContent = `Retrying ${retried} chunk(s)...`;
 }
 
 function blobToBase64(blob) {
@@ -888,6 +950,13 @@ class StreamingRecorder {
     return settled >= total;
   }
 
+  // Returns true if there are failed chunks whose blobs are still in memory
+  get hasRetryableChunks() {
+    return this._chunkStates.some(
+      (s, i) => s && s.state === "failed" && this._chunkBlobs[i] != null
+    );
+  }
+
   start(micStream) {
     this._micStream = micStream;
     this._chunkSeq = 0;
@@ -929,6 +998,35 @@ class StreamingRecorder {
 
   getStitchedText() {
     return mergeAllChunks(this._chunkResults);
+  }
+
+  // Re-send all failed chunks that still have their blob in memory.
+  // Returns the number of chunks queued for retry (0 if nothing to retry).
+  retryFailedChunks() {
+    if (this._cancelled) return 0;
+
+    // Refresh abort controller if it was aborted
+    if (this._abortController.signal.aborted) {
+      this._abortController = new AbortController();
+    }
+
+    let retried = 0;
+    for (let seq = 0; seq < this._chunkStates.length; seq++) {
+      const state = this._chunkStates[seq];
+      if (!state || state.state !== "failed") continue;
+      const blob = this._chunkBlobs[seq];
+      if (!blob) continue; // blob was lost — can't retry this chunk
+
+      // Reset state for a fresh retry
+      this._chunkStates[seq].state = "sent";
+      this._chunkStates[seq].retries = 0;
+      this._chunkStates[seq].error = null;
+
+      // Fire-and-forget — same pattern as the original send
+      this._sendChunk(blob, seq, 0);
+      retried++;
+    }
+    return retried;
   }
 
   _getSupportedMimeType() {
@@ -1128,11 +1226,14 @@ function createQueueCardHTML(id, item) {
 
   let failHTML = "";
   if (status === "failed") {
-    // Streaming items have no audio blob — can't retry, only discard
+    // Regular (non-streaming) items: retry re-queues the full audio blob
     const canRetry = !item.isStreaming;
+    // Streaming items: retry is possible if failed chunk blobs are still in the registry
+    const canRetryChunks = item.isStreaming && streamingRecorderRegistry.has(id);
     failHTML = `
       <div class="queue-card-fail-actions">
         ${canRetry ? '<button class="btn btn-primary btn-small queue-retry-btn">Retry</button>' : ""}
+        ${canRetryChunks ? '<button class="btn btn-primary btn-small queue-retry-chunks-btn">Retry Failed Chunks</button>' : ""}
         <button class="btn btn-small btn-danger queue-discard-btn">Discard</button>
       </div>`;
   }
@@ -1286,6 +1387,7 @@ function bindQueueCardEvents(card) {
             duration: item.duration || 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
+          streamingRecorderRegistry.delete(id);
           await PendingAudioStore.delete(id);
           card.remove();
           updateClearDoneBtn();
@@ -1303,6 +1405,7 @@ function bindQueueCardEvents(card) {
     if (discardBtn) {
       discardBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
+        streamingRecorderRegistry.delete(id);
         await PendingAudioStore.delete(id);
         card.remove();
         updateClearDoneBtn();
@@ -1415,10 +1518,21 @@ function bindQueueCardEvents(card) {
       });
     }
 
+    const retryChunksBtn = card.querySelector(".queue-retry-chunks-btn");
+    if (retryChunksBtn) {
+      retryChunksBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        retryChunksBtn.disabled = true;
+        retryChunksBtn.textContent = "Retrying...";
+        await retryFailedChunksInStreamer(id);
+      });
+    }
+
     const discardBtn = card.querySelector(".queue-discard-btn");
     if (discardBtn) {
       discardBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
+        streamingRecorderRegistry.delete(id); // release blob references
         await PendingAudioStore.delete(id);
         card.remove();
         showQueueSectionIfNeeded();
