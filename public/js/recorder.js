@@ -752,7 +752,7 @@ class StreamingRecorder {
 // ─── Queue UI ───
 
 const modeLabels = { transcribe: "Transcribe", translate: "Translate", prompt: "Prompt", clean: "Clean", task: "Task" };
-const statusLabels = { queued: "Queued", processing: "Processing...", done: "Done", failed: "Failed", streaming: "Streaming...", stitching: "Stitching..." };
+const statusLabels = { queued: "Queued", processing: "Processing...", done: "Done", failed: "Failed" };
 
 function formatQueueDate(ts) {
   const diff = Date.now() - ts;
@@ -774,10 +774,9 @@ function createQueueCardHTML(id, item) {
   const duration = formatQueueDuration(item.duration);
   const time = formatQueueDate(item.timestamp);
   const badgeClass = `queue-badge queue-badge-${status}`;
-  const badgeText = statusLabels[status] || status;
+  const badgeText = statusLabels[status];
 
   let bodyHTML = "";
-
   if (status === "done" && item.resultText) {
     bodyHTML = `
       <div class="queue-card-body hidden">
@@ -788,35 +787,6 @@ function createQueueCardHTML(id, item) {
           <button class="btn btn-small queue-edit-btn">Edit</button>
           <button class="btn btn-primary btn-small queue-save-btn">Save</button>
           <button class="btn btn-small btn-danger queue-discard-btn">Discard</button>
-        </div>
-      </div>`;
-  } else if (status === "streaming") {
-    const completedChunks = item.completedChunks || 0;
-    const totalChunks = item.totalChunks || 0;
-    const pct = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
-    const counterText = totalChunks > 0
-      ? `Chunk ${completedChunks}/${totalChunks} processing...`
-      : "Streaming...";
-    const partialText = item.partialText || "";
-    const partialHidden = partialText.trim() ? "" : " hidden";
-
-    bodyHTML = `
-      <div class="queue-streaming-progress">
-        <div class="queue-streaming-counter">${counterText}</div>
-        <div class="streaming-progress-bar">
-          <div class="streaming-progress-bar-fill" style="width: ${pct}%"></div>
-        </div>
-        <div class="queue-partial-text${partialHidden}" dir="auto">${partialText ? escapeHtmlQueue(partialText) : ""}</div>
-      </div>
-      <div class="queue-card-fail-actions">
-        <button class="btn btn-small btn-danger queue-cancel-streaming-btn">Cancel</button>
-      </div>`;
-  } else if (status === "stitching") {
-    bodyHTML = `
-      <div class="queue-streaming-progress">
-        <div class="queue-streaming-counter">Stitching transcript...</div>
-        <div class="streaming-progress-bar">
-          <div class="streaming-progress-bar-fill" style="width: 100%"></div>
         </div>
       </div>`;
   }
@@ -830,9 +800,7 @@ function createQueueCardHTML(id, item) {
       </div>`;
   }
 
-  const hasExpandableContent = status === "done" ||
-    (status === "streaming" && item.partialText && item.partialText.trim());
-  const expandIcon = hasExpandableContent ? '<span class="queue-expand-icon">&#9660;</span>' : "";
+  const expandIcon = status === "done" ? '<span class="queue-expand-icon">&#9660;</span>' : "";
 
   return `
     <div class="queue-card" data-id="${id}" data-status="${status}" data-mode="${item.recordingMode}">
@@ -890,38 +858,6 @@ async function updateQueueCard(id, status, resultText, resultLanguage) {
   card.replaceWith(newCard);
   bindQueueCardEvents(newCard);
   updateClearDoneBtn();
-}
-
-function updateStreamingCard(id, { completedChunks, totalChunks, partialText }) {
-  const card = queueList.querySelector(`[data-id="${id}"]`);
-  if (!card || card.dataset.status !== "streaming") return;
-
-  const pct = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
-  const counterText = totalChunks > 0
-    ? `Chunk ${completedChunks}/${totalChunks} processing...`
-    : "Streaming...";
-
-  const counter = card.querySelector(".queue-streaming-counter");
-  if (counter) counter.textContent = counterText;
-
-  const fill = card.querySelector(".streaming-progress-bar-fill");
-  if (fill) fill.style.width = `${pct}%`;
-
-  if (partialText && partialText.trim()) {
-    const partialEl = card.querySelector(".queue-partial-text");
-    if (partialEl) {
-      partialEl.textContent = partialText;
-      partialEl.classList.remove("hidden");
-    }
-
-    const header = card.querySelector(".queue-card-header");
-    if (header && !header.querySelector(".queue-expand-icon")) {
-      const expandIcon = document.createElement("span");
-      expandIcon.className = "queue-expand-icon";
-      expandIcon.innerHTML = "&#9660;";
-      header.appendChild(expandIcon);
-    }
-  }
 }
 
 function bindQueueCardEvents(card) {
@@ -1057,34 +993,6 @@ function bindQueueCardEvents(card) {
       });
     }
 
-  }
-
-  if (status === "streaming") {
-    const cancelBtn = card.querySelector(".queue-cancel-streaming-btn");
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (typeof cancelStreamingRecording === "function") {
-          cancelStreamingRecording(id);
-        }
-      });
-    }
-
-    const header = card.querySelector(".queue-card-header");
-    if (header) {
-      header.addEventListener("click", () => {
-        const partialEl = card.querySelector(".queue-partial-text");
-        if (!partialEl || !partialEl.textContent.trim()) return;
-        const isExpanded = card.classList.contains("expanded");
-        if (isExpanded) {
-          card.classList.remove("expanded");
-          partialEl.classList.add("hidden");
-        } else {
-          card.classList.add("expanded");
-          partialEl.classList.remove("hidden");
-        }
-      });
-    }
   }
 
   if (status === "failed") {
