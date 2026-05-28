@@ -606,8 +606,7 @@ async function handleStreamingComplete(id, sr, mode) {
   }
 
   // translate / clean / prompt: send stitched text for post-processing
-  // Save stitchedText to DB so page-reload restores can retry post-processing
-  await PendingAudioStore.update(id, { status: "stitching", stitchedText });
+  await PendingAudioStore.update(id, { status: "stitching" });
   updateQueueCard(id, "stitching");
 
   try {
@@ -686,73 +685,6 @@ async function retryPostProcessing(id) {
     await PendingAudioStore.update(id, { status: "done", resultText: rawText });
     await updateQueueCard(id, "done", rawText, item.resultLanguage || "unknown");
     statusText.textContent = "Post-processing failed again. Raw transcript preserved.";
-  }
-}
-
-async function retryStitching(id, item) {
-  const stitchedText = item.stitchedText || "";
-  const mode = item.recordingMode;
-
-  if (!stitchedText.trim()) {
-    await PendingAudioStore.update(id, { status: "failed", error: "No transcription data to process" });
-    await updateQueueCard(id, "failed");
-    return;
-  }
-
-  const needsPostProcessing = mode === "translate" || mode === "clean" || mode === "prompt";
-
-  if (!needsPostProcessing) {
-    // Transcribe mode: stitched text is the final result
-    await PendingAudioStore.update(id, {
-      status: "done",
-      resultText: stitchedText,
-      resultLanguage: "unknown",
-    });
-    await updateQueueCard(id, "done", stitchedText, "unknown");
-    playNotificationSound("done");
-    if (autoSaveEnabled) {
-      const doneCard = queueList.querySelector(`[data-id="${id}"]`);
-      if (doneCard) autoSaveCard(id, doneCard);
-    }
-    return;
-  }
-
-  try {
-    const token = await currentUser.getIdToken();
-    const res = await fetch("/api/transcribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ text: stitchedText, mode }),
-    });
-
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
-    const data = await res.json();
-
-    const finalText = data.text || stitchedText;
-    await PendingAudioStore.update(id, {
-      status: "done",
-      resultText: finalText,
-      resultLanguage: data.language || "unknown",
-      postProcessFailed: false,
-      postProcessMode: null,
-    });
-    await updateQueueCard(id, "done", finalText, data.language || "unknown");
-    playNotificationSound("done");
-    if (autoSaveEnabled) {
-      const doneCard = queueList.querySelector(`[data-id="${id}"]`);
-      if (doneCard) autoSaveCard(id, doneCard);
-    }
-  } catch {
-    // Post-processing failed — preserve raw stitched text so user doesn't lose their work
-    await PendingAudioStore.update(id, {
-      status: "done",
-      resultText: stitchedText,
-      resultLanguage: "unknown",
-      postProcessFailed: true,
-      postProcessMode: mode,
-    });
-    await updateQueueCard(id, "done", stitchedText, "unknown");
-    playNotificationSound("done");
   }
 }
 
@@ -1499,21 +1431,16 @@ async function restoreQueue() {
     }
 
     queueSection.classList.remove("hidden");
-    const stitchingItems = [];
     for (const item of items) {
       // Reset processing items to queued (they were interrupted)
       if (item.status === "processing") {
         await PendingAudioStore.update(item.id, { status: "queued" });
         item.status = "queued";
       }
-      // Streaming items lost their chunks when page reloaded — mark as failed
-      if (item.status === "streaming") {
+      // Streaming/stitching items were mid-flight when page reloaded — mark as failed
+      if (item.status === "streaming" || item.status === "stitching") {
         await PendingAudioStore.update(item.id, { status: "failed", error: "Interrupted (page reloaded)" });
         item.status = "failed";
-      }
-      // Stitching items have their transcribed text preserved — collect for retry after render
-      if (item.status === "stitching") {
-        stitchingItems.push(item);
       }
       queueList.insertAdjacentHTML("beforeend", createQueueCardHTML(item.id, item));
       bindQueueCardEvents(queueList.querySelector(`[data-id="${item.id}"]`));
@@ -1521,11 +1448,6 @@ async function restoreQueue() {
 
     updateClearDoneBtn();
     QueueProcessor.processNext();
-
-    // Retry post-processing for items that were mid-stitching when page reloaded
-    for (const item of stitchingItems) {
-      retryStitching(item.id, item);
-    }
   } catch (e) {
     console.warn("Could not restore queue:", e);
   }
