@@ -329,56 +329,6 @@ Return ONLY valid JSON: {"text": "the generated prompt here", "language": "${par
   }
 });
 
-exports.transcribeChunk = onRequest({ cors: true, maxInstances: 20, invoker: "public", timeoutSeconds: 60, memory: "256MiB" }, async (req, res) => {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
-  const decoded = await verifyAuthToken(req);
-  if (!decoded) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  const uid = decoded.uid;
-
-  const { audio, mimeType } = req.body;
-  if (!audio || !mimeType) {
-    res.status(400).json({ error: "Missing audio or mimeType" });
-    return;
-  }
-
-  const audioSizeKB = Math.round(audio.length * 0.75 / 1024);
-  if (audioSizeKB < 2) {
-    res.json({ text: "", language: "unknown" });
-    return;
-  }
-
-  const prompt = `Transcribe this audio chunk exactly as spoken. This is a segment from a longer recording — do not add any extra text, commentary, or formatting.
-
-CRITICAL: Only transcribe words you can CLEARLY hear. If the audio is silent, corrupted, or contains only noise, you MUST return empty text. NEVER guess or fabricate content that is not clearly audible.
-
-CRITICAL RULE — English technical terms and abbreviations:
-When the speaker uses English words, technical terms, or abbreviations while speaking Arabic, write them in their original English form, NEVER transliterate them to Arabic script.
-
-Detect the primary language ("en" if mostly English, "ar" if mostly Arabic, "mixed" if heavily mixed).
-Return ONLY valid JSON in this exact format: {"text": "the transcribed text here", "language": "en" or "ar" or "mixed"}
-If the audio is empty, unclear, corrupted, or contains no detectable speech, return: {"text": "", "language": "unknown"}`;
-
-  try {
-    const contents = [
-      { parts: [{ inlineData: { mimeType, data: audio } }, { text: prompt }] },
-    ];
-
-    const responseText = await generateContent(uid, contents);
-    const parsed = safeParseJson(responseText);
-    res.json(parsed);
-  } catch (err) {
-    console.error("transcribeChunk error:", err);
-    res.status(500).json({ error: "Transcription failed" });
-  }
-});
-
 exports.refine = onRequest({ cors: true, maxInstances: 10, invoker: "public", timeoutSeconds: 300, memory: "1GiB" }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
