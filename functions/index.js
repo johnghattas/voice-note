@@ -167,7 +167,111 @@ exports.transcribe = onRequest({ cors: true, maxInstances: 10, invoker: "public"
   }
   const uid = decoded.uid;
 
-  const { audio, mimeType, mode } = req.body;
+  const { audio, mimeType, mode, text } = req.body;
+
+  // --- TEXT-ONLY MODE: phase 2 post-processing for chunked recordings ---
+  // When text is provided without audio, run the stitched text through the
+  // mode-specific prompt (translate/clean/prompt). Used after chunk stitching.
+  if (text && !audio) {
+    if (!text.trim()) {
+      res.json({ text: "", language: "unknown" });
+      return;
+    }
+
+    const language = req.body.language || "unknown";
+
+    if (mode === "transcribe" || !mode) {
+      // No post-processing needed for raw transcription — return as-is
+      res.json({ text, language });
+      return;
+    }
+
+    try {
+      let textPrompt;
+
+      if (mode === "translate") {
+        textPrompt = `Translate the following Arabic text to English. After translating, refine the English output:
+1. Fix any grammar or syntax errors
+2. Make the phrasing natural and fluent — remove awkward literal translation artifacts
+3. Improve clarity and readability
+4. Keep the same tone (formal/informal) as the original
+
+CRITICAL: The refined translation must convey the EXACT same meaning as the original. Do NOT add, invent, or change any ideas.
+
+Text to translate:
+"""
+${text}
+"""
+
+Return ONLY valid JSON in this exact format: {"text": "the refined english translation here", "language": "ar-to-en"}
+If the input is empty, return: {"text": "", "language": "unknown"}`;
+      } else if (mode === "clean") {
+        textPrompt = `Clean the following transcribed text. Do not return the raw version — return only the cleaned version.
+
+CRITICAL: Preserve the speaker's dialect and tone EXACTLY.
+- If they speak Egyptian Arabic (عامية مصرية), the output MUST stay in Egyptian Arabic — do NOT convert to Modern Standard Arabic (فصحى)
+- If they speak any other dialect, keep that dialect
+- If they speak English, keep it in English
+
+Cleaning tasks:
+1. Remove all filler words and verbal tics (آه، يعني، طب، خلاص، uh، um، like، you know)
+2. Remove repeated/redundant sentences — keep the clearest version
+3. Make sentences more direct while keeping the SAME dialect and casual tone
+4. Organize the ideas in logical order
+5. Convert technical/English terms spoken in Arabic transliteration to their proper English form, while keeping the Arabic prefix/preposition attached with "ـ":
+   - Examples: "الأدمن" → "الـ Admin", "الروم" → "الـ Room", "باسورد" → "Password", "بباسورد" → "بـ Password", "الأونر" → "الـ Owner", "اليوزر" → "الـ User", "السيرفر" → "الـ Server", "الداتابيز" → "الـ Database"
+   - Keep the Arabic article "الـ" or preposition "بـ/فـ/لـ" before the English word
+   - This applies to ALL tech terms — not just the examples above
+
+CRITICAL RULE — English technical terms and abbreviations:
+When the text contains English words, technical terms, or abbreviations written in Arabic transliteration, you MUST convert them to their original English form, NEVER leave them in Arabic script.
+
+CRITICAL: Preserve ALL content and ideas. This is a cleaning task, NOT a summarization task.
+- You must keep EVERY distinct point, idea, and piece of information
+- Only remove true duplicates (the exact same idea said twice)
+- When in doubt, KEEP the content rather than removing it
+
+Text to clean:
+"""
+${text}
+"""
+
+Return ONLY valid JSON in this exact format: {"text": "the cleaned text here", "language": "en" or "ar" or "mixed"}
+If the input is empty, return: {"text": "", "language": "unknown"}`;
+      } else if (mode === "prompt") {
+        textPrompt = `Convert the following spoken text into a well-structured AI prompt that can be used with ChatGPT, Claude, or other AI assistants.
+
+CRITICAL: Do NOT add, invent, or fabricate any ideas that are not in the original text. Only structure and enhance what is given.
+
+The prompt should be:
+- Clear and specific
+- Well-organized with context, instructions, and expected output format where appropriate
+- Written in the same language as the original text
+- Enhanced with prompt engineering best practices while preserving the speaker's intent
+
+Original spoken text:
+"""
+${text}
+"""
+
+Return ONLY valid JSON: {"text": "the generated prompt here", "language": "${language}"}`;
+      } else {
+        res.status(400).json({ error: "Invalid mode" });
+        return;
+      }
+
+      const contents = [{ parts: [{ text: textPrompt }] }];
+      const responseText = await generateContent(uid, contents);
+      const parsed = safeParseJson(responseText);
+      res.json(parsed);
+    } catch (err) {
+      console.error("AI API error:", err);
+      res.status(500).json({ error: "Post-processing failed" });
+    }
+    return;
+  }
+
+  // --- AUDIO MODE: existing behavior, fully backward-compatible ---
   if (!audio || !mimeType) {
     res.status(400).json({ error: "Missing audio or mimeType" });
     return;
@@ -325,6 +429,56 @@ Return ONLY valid JSON: {"text": "the generated prompt here", "language": "${par
     res.json(parsed);
   } catch (err) {
     console.error("AI API error:", err);
+    res.status(500).json({ error: "Transcription failed" });
+  }
+});
+
+exports.transcribeChunk = onRequest({ cors: true, maxInstances: 20, invoker: "public", timeoutSeconds: 60, memory: "256MiB" }, async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  const decoded = await verifyAuthToken(req);
+  if (!decoded) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const uid = decoded.uid;
+
+  const { audio, mimeType } = req.body;
+  if (!audio || !mimeType) {
+    res.status(400).json({ error: "Missing audio or mimeType" });
+    return;
+  }
+
+  const audioSizeKB = Math.round(audio.length * 0.75 / 1024);
+  if (audioSizeKB < 2) {
+    res.json({ text: "", language: "unknown" });
+    return;
+  }
+
+  const prompt = `Transcribe this audio chunk exactly as spoken. This is a segment from a longer recording — do not add any extra text, commentary, or formatting.
+
+CRITICAL: Only transcribe words you can CLEARLY hear. If the audio is silent, corrupted, or contains only noise, you MUST return empty text. NEVER guess or fabricate content that is not clearly audible.
+
+CRITICAL RULE — English technical terms and abbreviations:
+When the speaker uses English words, technical terms, or abbreviations while speaking Arabic, write them in their original English form, NEVER transliterate them to Arabic script.
+
+Detect the primary language ("en" if mostly English, "ar" if mostly Arabic, "mixed" if heavily mixed).
+Return ONLY valid JSON in this exact format: {"text": "the transcribed text here", "language": "en" or "ar" or "mixed"}
+If the audio is empty, unclear, corrupted, or contains no detectable speech, return: {"text": "", "language": "unknown"}`;
+
+  try {
+    const contents = [
+      { parts: [{ inlineData: { mimeType, data: audio } }, { text: prompt }] },
+    ];
+
+    const responseText = await generateContent(uid, contents);
+    const parsed = safeParseJson(responseText);
+    res.json(parsed);
+  } catch (err) {
+    console.error("transcribeChunk error:", err);
     res.status(500).json({ error: "Transcription failed" });
   }
 });
