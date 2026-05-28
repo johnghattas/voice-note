@@ -907,6 +907,8 @@ class StreamingRecorder {
   static OVERLAP_MS = 2000;
   static MAX_RETRIES = 3;
   static MIN_BLOB_SIZE = 1000;
+  static SPEECH_THRESHOLD = 0.01;
+  static VAD_CHECK_MS = 100;
 
   constructor() {
     this._micStream = null;
@@ -922,6 +924,14 @@ class StreamingRecorder {
     this._abortController = null;
     this._cancelled = false;
     this._active = false;
+
+    // Voice Activity Detection (VAD)
+    this._audioContext = null;
+    this._analyser = null;
+    this._vadDataArray = null;
+    this._vadInterval = null;
+    this._chunkHadSpeech = [];
+    this._activeChunkSeq = -1;
 
     this.language = "";
     // callback(seqNum: number, text: string) — fires after each chunk result arrives
@@ -963,9 +973,20 @@ class StreamingRecorder {
     this._chunkStates = [];
     this._chunkResults = [];
     this._chunkBlobs = [];
+    this._chunkHadSpeech = [];
+    this._activeChunkSeq = -1;
     this._cancelled = false;
     this._active = true;
     this._abortController = new AbortController();
+
+    // Set up Voice Activity Detection via Web Audio API
+    this._audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = this._audioContext.createMediaStreamSource(micStream);
+    this._analyser = this._audioContext.createAnalyser();
+    this._analyser.fftSize = 2048;
+    source.connect(this._analyser);
+    this._vadDataArray = new Uint8Array(this._analyser.fftSize);
+    this._vadInterval = setInterval(() => this._checkVAD(), StreamingRecorder.VAD_CHECK_MS);
 
     this._currentRecorder = this._startNewRecorder();
 
@@ -983,6 +1004,15 @@ class StreamingRecorder {
     this._active = false;
     clearInterval(this._chunkInterval);
     this._chunkInterval = null;
+
+    // Clean up VAD resources
+    clearInterval(this._vadInterval);
+    this._vadInterval = null;
+    if (this._audioContext) {
+      this._audioContext.close();
+      this._audioContext = null;
+    }
+    this._analyser = null;
 
     if (this._currentRecorder && this._currentRecorder.state === "recording") {
       this._currentRecorder.stop();
@@ -1029,6 +1059,27 @@ class StreamingRecorder {
     return retried;
   }
 
+  _checkVAD() {
+    if (!this._analyser || this._activeChunkSeq < 0) return;
+
+    this._analyser.getByteTimeDomainData(this._vadDataArray);
+    let sumSquares = 0;
+    for (let i = 0; i < this._vadDataArray.length; i++) {
+      const v = (this._vadDataArray[i] - 128) / 128;
+      sumSquares += v * v;
+    }
+    const rms = Math.sqrt(sumSquares / this._vadDataArray.length);
+
+    if (rms > StreamingRecorder.SPEECH_THRESHOLD) {
+      this._chunkHadSpeech[this._activeChunkSeq] = true;
+      // During overlap, the previous chunk is still recording
+      const prev = this._activeChunkSeq - 1;
+      if (prev >= 0 && this._chunkStates[prev]?.state === "pending") {
+        this._chunkHadSpeech[prev] = true;
+      }
+    }
+  }
+
   _getSupportedMimeType() {
     const types = [
       "audio/webm;codecs=opus",
@@ -1048,6 +1099,8 @@ class StreamingRecorder {
     const chunks = [];
     const seq = this._chunkSeq++;
     this._chunkStates[seq] = { state: "pending", retries: 0, text: null, error: null };
+    this._chunkHadSpeech[seq] = false;
+    this._activeChunkSeq = seq;
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunks.push(e.data);
@@ -1059,8 +1112,7 @@ class StreamingRecorder {
         return;
       }
       const blob = new Blob(chunks, { type: mimeType });
-      if (blob.size < StreamingRecorder.MIN_BLOB_SIZE) {
-        // Too small — silence/noise, mark done and skip upload
+      if (blob.size < StreamingRecorder.MIN_BLOB_SIZE || !this._chunkHadSpeech[seq]) {
         this._chunkStates[seq].state = "done";
         this._chunkResults[seq] = "";
         return;
