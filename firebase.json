@@ -82,6 +82,12 @@
         "function": {
           "functionId": "vertexModel"
         }
+      },
+      {
+        "source": "/api/transcribe-chunk",
+        "function": {
+          "functionId": "transcribeChunk"
+        }
       }
     ]
   },
