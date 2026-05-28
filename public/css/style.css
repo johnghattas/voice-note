@@ -874,9 +874,26 @@ body {
   font-size: 0.95rem;
 }
 
-.load-more {
-  display: block;
-  margin: 16px auto;
+/* ─── Infinite Scroll Sentinel ─── */
+.load-more-sentinel {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.sentinel-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spinnerRotate 0.8s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
 }
 
 /* ─── Skeleton Loading ─── */
