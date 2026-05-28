@@ -1,6 +1,5 @@
 const historyList = document.getElementById("historyList");
 const searchInput = document.getElementById("searchInput");
-const loadMoreBtn = document.getElementById("loadMoreBtn");
 const copyToast = document.getElementById("copyToast");
 
 let allTranscriptions = [];
@@ -8,10 +7,20 @@ let lastDoc = null;
 let loading = false;
 let hasMore = true;
 let unsubscribeLive = null;
+let scrollObserver = null;
 let isInitialLoad = false;
 let skeletonShownAt = null;
 let skeletonMinDisplayTimer = null;
 const PAGE_SIZE = 20;
+const sentinel = document.getElementById("loadMoreSentinel");
+
+function showSentinelSpinner() {
+  sentinel.innerHTML = '<div class="sentinel-spinner"></div>';
+}
+
+function clearSentinelSpinner() {
+  sentinel.innerHTML = '';
+}
 
 function showSkeletonLoading(count = 5) {
   const cards = Array.from({ length: count }, () => `
@@ -45,9 +54,18 @@ function initHistory(user) {
   hasMore = true;
   isInitialLoad = true;
   historyList.innerHTML = "";
+  if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+  clearSentinelSpinner();
 
   listenForNewDocs(user);
   loadPage(user);
+
+  scrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !loading && hasMore) {
+      loadPage(currentUser);
+    }
+  }, { rootMargin: '0px 0px 120px 0px' });
+  scrollObserver.observe(sentinel);
 }
 
 function listenForNewDocs(user) {
@@ -90,7 +108,7 @@ async function loadPage(user) {
     showSkeletonLoading(5);
   }
 
-  loadMoreBtn.textContent = "Loading...";
+  showSentinelSpinner();
 
   let q = db
     .collection("transcriptions")
@@ -107,9 +125,7 @@ async function loadPage(user) {
 
     if (snapshot.empty || snapshot.docs.length < PAGE_SIZE) {
       hasMore = false;
-      loadMoreBtn.classList.add("hidden");
-    } else {
-      loadMoreBtn.classList.remove("hidden");
+      if (scrollObserver) scrollObserver.unobserve(sentinel);
     }
 
     snapshot.docs.forEach((doc) => {
@@ -133,12 +149,8 @@ async function loadPage(user) {
   }
 
   loading = false;
-  loadMoreBtn.textContent = "Load More";
+  clearSentinelSpinner();
 }
-
-loadMoreBtn.addEventListener("click", () => {
-  if (currentUser) loadPage(currentUser);
-});
 
 function renderHistory() {
   if (skeletonMinDisplayTimer) {
@@ -173,7 +185,6 @@ function renderHistory() {
     historyList.innerHTML = `<div class="empty-state">${
       filter ? "No results found" : "No transcriptions yet. Start recording!"
     }</div>`;
-    loadMoreBtn.classList.add("hidden");
     return;
   }
 
