@@ -537,6 +537,218 @@ async function sendAudioToServer({ audioBlob, mimeType, isRefining, refineText, 
   return await res.json();
 }
 
+// ─── StreamingRecorder ───
+
+class StreamingRecorder {
+  static CHUNK_SECONDS = 10;
+  static OVERLAP_MS = 2000;
+  static MAX_RETRIES = 3;
+  static MIN_BLOB_SIZE = 1000;
+
+  constructor() {
+    this._micStream = null;
+    this._currentRecorder = null;
+    this._chunkInterval = null;
+    this._chunkSeq = 0;
+    // Array<{ state: 'pending'|'sent'|'done'|'failed', retries: number, text: string|null, error: string|null }>
+    this._chunkStates = [];
+    // Sequence-indexed array of transcribed text per chunk
+    this._chunkResults = [];
+    // Blob references — nulled after successful upload for memory management
+    this._chunkBlobs = [];
+    this._abortController = null;
+    this._cancelled = false;
+    this._active = false;
+
+    this.language = "";
+    // callback(seqNum: number, text: string) — fires after each chunk result arrives
+    this.onChunkResult = null;
+  }
+
+  get totalChunks() {
+    return this._chunkSeq;
+  }
+
+  get completedChunks() {
+    return this._chunkStates.filter((s) => s && s.state === "done").length;
+  }
+
+  get failedChunks() {
+    return this._chunkStates.filter((s) => s && s.state === "failed").length;
+  }
+
+  get isComplete() {
+    if (this._active) return false;
+    const total = this._chunkSeq;
+    if (total === 0) return false;
+    const settled = this._chunkStates.filter(
+      (s) => s && (s.state === "done" || s.state === "failed")
+    ).length;
+    return settled >= total;
+  }
+
+  start(micStream) {
+    this._micStream = micStream;
+    this._chunkSeq = 0;
+    this._chunkStates = [];
+    this._chunkResults = [];
+    this._chunkBlobs = [];
+    this._cancelled = false;
+    this._active = true;
+    this._abortController = new AbortController();
+
+    this._currentRecorder = this._startNewRecorder();
+
+    this._chunkInterval = setInterval(() => {
+      if (!this._active) return;
+      const old = this._currentRecorder;
+      this._currentRecorder = this._startNewRecorder();
+      setTimeout(() => {
+        if (old && old.state === "recording") old.stop();
+      }, StreamingRecorder.OVERLAP_MS);
+    }, StreamingRecorder.CHUNK_SECONDS * 1000);
+  }
+
+  stop() {
+    this._active = false;
+    clearInterval(this._chunkInterval);
+    this._chunkInterval = null;
+
+    if (this._currentRecorder && this._currentRecorder.state === "recording") {
+      this._currentRecorder.stop();
+    }
+    this._currentRecorder = null;
+  }
+
+  cancel() {
+    this._cancelled = true;
+    if (this._abortController) this._abortController.abort();
+    this.stop();
+  }
+
+  getStitchedText() {
+    return mergeAllChunks(this._chunkResults);
+  }
+
+  _getSupportedMimeType() {
+    const types = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/mp4",
+    ];
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return "audio/webm";
+  }
+
+  _startNewRecorder() {
+    const mimeType = this._getSupportedMimeType();
+    const recorder = new MediaRecorder(this._micStream, { mimeType });
+    const chunks = [];
+    const seq = this._chunkSeq++;
+    this._chunkStates[seq] = { state: "pending", retries: 0, text: null, error: null };
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      if (this._cancelled) {
+        this._chunkStates[seq].state = "failed";
+        return;
+      }
+      const blob = new Blob(chunks, { type: mimeType });
+      if (blob.size < StreamingRecorder.MIN_BLOB_SIZE) {
+        // Too small — silence/noise, mark done and skip upload
+        this._chunkStates[seq].state = "done";
+        this._chunkResults[seq] = "";
+        return;
+      }
+      this._chunkBlobs[seq] = blob;
+      this._chunkStates[seq].state = "sent";
+      // Fire-and-forget — don't await
+      this._sendChunk(blob, seq, 0);
+    };
+
+    recorder.start();
+    return recorder;
+  }
+
+  async _sendChunk(blob, seqNum, retryCount) {
+    if (this._cancelled) {
+      this._chunkStates[seqNum].state = "failed";
+      return;
+    }
+
+    try {
+      const base64 = await blobToBase64(blob);
+
+      if (this._cancelled) {
+        this._chunkStates[seqNum].state = "failed";
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+
+      if (this._cancelled) {
+        this._chunkStates[seqNum].state = "failed";
+        return;
+      }
+
+      const body = { audio: base64, mimeType: blob.type, seq: seqNum };
+      if (this.language) body.language = this.language;
+
+      const resp = await fetch("/api/transcribe-chunk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify(body),
+        signal: this._abortController.signal,
+      });
+
+      if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+      const data = await resp.json();
+
+      this._chunkResults[seqNum] = data.text || "";
+      this._chunkStates[seqNum].state = "done";
+      this._chunkStates[seqNum].text = data.text || "";
+
+      // Release blob reference — allow GC to reclaim memory
+      this._chunkBlobs[seqNum] = null;
+
+      if (typeof this.onChunkResult === "function" && data.text) {
+        this.onChunkResult(seqNum, data.text);
+      }
+    } catch (err) {
+      if (this._cancelled || err.name === "AbortError") {
+        this._chunkStates[seqNum].state = "failed";
+        return;
+      }
+
+      if (retryCount < StreamingRecorder.MAX_RETRIES) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, retryCount) * 1000;
+        await new Promise((r) => setTimeout(r, delay));
+
+        if (this._cancelled) {
+          this._chunkStates[seqNum].state = "failed";
+          return;
+        }
+
+        this._chunkStates[seqNum].retries = retryCount + 1;
+        return this._sendChunk(blob, seqNum, retryCount + 1);
+      }
+
+      this._chunkStates[seqNum].state = "failed";
+      this._chunkStates[seqNum].error = err.message;
+    }
+  }
+}
+
 // ─── Queue UI ───
 
 const modeLabels = { transcribe: "Transcribe", translate: "Translate", prompt: "Prompt", clean: "Clean", task: "Task" };
