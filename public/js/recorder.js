@@ -1128,11 +1128,9 @@ function createQueueCardHTML(id, item) {
 
   let failHTML = "";
   if (status === "failed") {
-    // Streaming items have no audio blob — can't retry, only discard
-    const canRetry = !item.isStreaming;
     failHTML = `
       <div class="queue-card-fail-actions">
-        ${canRetry ? '<button class="btn btn-primary btn-small queue-retry-btn">Retry</button>' : ""}
+        <button class="btn btn-primary btn-small queue-retry-btn">Retry</button>
         <button class="btn btn-small btn-danger queue-discard-btn">Discard</button>
       </div>`;
   }
