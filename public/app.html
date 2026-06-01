@@ -259,8 +259,27 @@
 
         <div class="reference-form">
           <div class="vertex-field">
-            <label class="edit-label" for="referenceText">Reference Text</label>
-            <textarea id="referenceText" class="vertex-input" rows="4" placeholder="Enter text with specialized terms, names, or phrases..."></textarea>
+            <label class="edit-label" for="referenceType">Type</label>
+            <select id="referenceType" class="vertex-input">
+              <option value="link">Link (URL)</option>
+              <option value="path">File Path</option>
+              <option value="term">Technical Term</option>
+              <option value="brand">Brand Name</option>
+            </select>
+          </div>
+          <div class="vertex-field">
+            <label class="edit-label" for="referenceText">Written Form</label>
+            <input type="text" id="referenceText" class="vertex-input" placeholder="e.g., https://example.com or React.js" />
+          </div>
+          <div class="vertex-field">
+            <label class="edit-label" for="referenceSpoken">Spoken Form</label>
+            <input type="text" id="referenceSpoken" class="vertex-input" placeholder="e.g., example dot com or react" />
+          </div>
+          <div class="vertex-field">
+            <label class="checkbox-label">
+              <input type="checkbox" id="referenceCaseSensitive" />
+              <span>Case Sensitive (for technical terms)</span>
+            </label>
           </div>
           <div class="settings-actions">
             <button id="addReferenceBtn" class="btn btn-primary">Add Reference</button>

@@ -58,11 +58,26 @@ function renderReferences() {
 // Create reference card HTML
 function createReferenceCard(ref) {
   const isActive = activeReferences.has(ref.id);
+  const typeIcons = {
+    link: "🔗",
+    path: "📁",
+    term: "💻",
+    brand: "🏢"
+  };
+  const typeIcon = typeIcons[ref.type] || "📝";
+
   return `
     <div class="reference-card" data-id="${ref.id}">
       <div class="reference-card-header">
         <input type="checkbox" class="reference-checkbox" data-id="${ref.id}" ${isActive ? "checked" : ""} />
-        <div class="reference-replacement">${escapeHtml(ref.text)}</div>
+        <div class="reference-content">
+          <div class="reference-type-badge">${typeIcon} ${ref.type}</div>
+          <div class="reference-text">
+            <strong>${escapeHtml(ref.text)}</strong>
+            <span class="reference-spoken">← "${escapeHtml(ref.spokenForm)}"</span>
+            ${ref.caseSensitive ? '<span class="reference-case-badge">Case Sensitive</span>' : ''}
+          </div>
+        </div>
         <div class="reference-card-actions">
           <button class="reference-edit-btn" data-id="${ref.id}" title="Edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -138,24 +153,43 @@ function bindReferenceEvents() {
 
 // Create new reference
 const addReferenceBtn = document.getElementById("addReferenceBtn");
+const referenceTypeInput = document.getElementById("referenceType");
 const referenceTextInput = document.getElementById("referenceText");
+const referenceSpokenInput = document.getElementById("referenceSpoken");
+const referenceCaseSensitiveInput = document.getElementById("referenceCaseSensitive");
 
 if (addReferenceBtn) {
   addReferenceBtn.addEventListener("click", async () => {
+    const type = referenceTypeInput.value;
     const text = referenceTextInput.value.trim();
+    const spokenForm = referenceSpokenInput.value.trim();
+    const caseSensitive = referenceCaseSensitiveInput.checked;
+
     if (!text) {
-      alert("Please enter reference text");
+      alert("Please enter the written form");
+      return;
+    }
+
+    if (!spokenForm) {
+      alert("Please enter the spoken form");
       return;
     }
 
     try {
       await db.collection("references").add({
         userId: currentUser.uid,
+        type: type,
         text: text,
+        spokenForm: spokenForm,
+        caseSensitive: caseSensitive,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastUsed: null,
       });
 
+      // Clear form
       referenceTextInput.value = "";
+      referenceSpokenInput.value = "";
+      referenceCaseSensitiveInput.checked = false;
     } catch (err) {
       alert("Failed to add reference: " + err.message);
     }
@@ -206,7 +240,7 @@ async function deleteReference(id) {
 // Load active references from localStorage
 function loadActiveReferences() {
   try {
-    const stored = localStorage.getItem("activeReferences");
+    const stored = localStorage.getItem("voicenotes_activeRefs");
     if (stored) {
       activeReferences = new Set(JSON.parse(stored));
     }
@@ -218,7 +252,7 @@ function loadActiveReferences() {
 // Save active references to localStorage
 function saveActiveReferences() {
   try {
-    localStorage.setItem("activeReferences", JSON.stringify([...activeReferences]));
+    localStorage.setItem("voicenotes_activeRefs", JSON.stringify([...activeReferences]));
   } catch (err) {
     // Ignore
   }

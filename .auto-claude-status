@@ -3,23 +3,23 @@
   "spec": "009-reference-text-custom-vocabulary-for-transcription",
   "state": "building",
   "subtasks": {
-    "completed": 7,
+    "completed": 13,
     "total": 14,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Frontend Logic",
+    "current": "Integration",
     "id": null,
-    "total": 5
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 8,
+    "number": 14,
     "started_at": "2026-06-01T03:30:50.626986"
   },
-  "last_update": "2026-06-01T03:43:41.868306"
+  "last_update": "2026-06-01T03:56:57.964954"
 }

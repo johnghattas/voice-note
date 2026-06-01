@@ -162,11 +162,6 @@ function safeParseJson(responseText) {
 
 async function fetchReferences(uid, referenceIds = null) {
   try {
-    let query = admin.firestore()
-      .collection("references")
-      .where("userId", "==", uid)
-      .where("isActive", "==", true);
-
     // If specific reference IDs are provided, fetch only those
     if (referenceIds && Array.isArray(referenceIds) && referenceIds.length > 0) {
       // Firestore 'in' queries are limited to 30 items
@@ -180,7 +175,6 @@ async function fetchReferences(uid, referenceIds = null) {
         const snapshot = await admin.firestore()
           .collection("references")
           .where("userId", "==", uid)
-          .where("isActive", "==", true)
           .where(admin.firestore.FieldPath.documentId(), "in", chunk)
           .get();
         allDocs.push(...snapshot.docs);
@@ -192,25 +186,16 @@ async function fetchReferences(uid, referenceIds = null) {
         const data = doc.data();
         return {
           id: doc.id,
+          type: data.type || "term",
           text: data.text || "",
-          category: data.category || "general",
+          spokenForm: data.spokenForm || "",
+          caseSensitive: data.caseSensitive || false,
         };
       });
     }
 
-    // Otherwise, fetch all active references for the user
-    const snapshot = await query.get();
-
-    if (snapshot.empty) return [];
-
-    return snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        text: data.text || "",
-        category: data.category || "general",
-      };
-    });
+    // No referenceIds provided, return empty array
+    return [];
   } catch (err) {
     console.error("Error fetching references:", err);
     return [];
@@ -222,15 +207,46 @@ function buildPromptWithReferences(basePrompt, references) {
     return basePrompt;
   }
 
-  const referenceSection = references
-    .map((ref) => `- ${ref.text}`)
-    .join("\n");
+  // Group references by type
+  const byType = {
+    link: references.filter(r => r.type === "link"),
+    path: references.filter(r => r.type === "path"),
+    term: references.filter(r => r.type === "term"),
+    brand: references.filter(r => r.type === "brand")
+  };
 
-  const enhancedPrompt = `IMPORTANT: Use the following reference text and custom vocabulary when transcribing. These are domain-specific terms, names, and phrases that may appear in the audio:
+  let referenceSection = "Custom Vocabulary:\n";
 
-${referenceSection}
+  if (byType.link.length > 0) {
+    referenceSection += "\nLinks:\n";
+    byType.link.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
 
-When you encounter words or phrases that match or sound similar to items in the reference list, use the reference text spelling and format.
+  if (byType.path.length > 0) {
+    referenceSection += "\nFile Paths:\n";
+    byType.path.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
+
+  if (byType.term.length > 0) {
+    referenceSection += "\nTechnical Terms:\n";
+    byType.term.forEach(ref => {
+      const caseNote = ref.caseSensitive ? " (preserve casing)" : "";
+      referenceSection += `- When you hear "${ref.spokenForm}"${caseNote}, write "${ref.text}"\n`;
+    });
+  }
+
+  if (byType.brand.length > 0) {
+    referenceSection += "\nBrand Names:\n";
+    byType.brand.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
+
+  const enhancedPrompt = `${referenceSection}
 
 ---
 
