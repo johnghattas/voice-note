@@ -248,6 +248,33 @@
     </div>
   </div>
 
+  <div id="referencesModal" class="edit-modal hidden">
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3>Reference Text & Custom Vocabulary</h3>
+        <button id="referencesModalClose" class="edit-modal-close">&times;</button>
+      </div>
+      <div class="edit-modal-body">
+        <p class="settings-desc">Add reference text or custom vocabulary to improve transcription accuracy for specific terms, names, or phrases.</p>
+
+        <div class="reference-form">
+          <div class="vertex-field">
+            <label class="edit-label" for="referenceText">Reference Text</label>
+            <textarea id="referenceText" class="vertex-input" rows="4" placeholder="Enter text with specialized terms, names, or phrases..."></textarea>
+          </div>
+          <div class="settings-actions">
+            <button id="addReferenceBtn" class="btn btn-primary">Add Reference</button>
+          </div>
+        </div>
+
+        <div class="references-section">
+          <label class="edit-label">Saved References</label>
+          <div id="referencesList" class="references-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
