@@ -13,5 +13,21 @@ service cloud.firestore {
     match /vertexSettings/{userId} {
       allow read, write: if false;
     }
+    match /references/{refId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'type', 'text', 'spokenForm', 'caseSensitive', 'createdAt'])
+                    && request.resource.data.type in ['link', 'path', 'term', 'brand']
+                    && request.resource.data.text.size() <= 500
+                    && request.resource.data.spokenForm.size() <= 200;
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.type in ['link', 'path', 'term', 'brand']
+                    && request.resource.data.text.size() <= 500
+                    && request.resource.data.spokenForm.size() <= 200;
+    }
   }
 }
