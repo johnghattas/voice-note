@@ -480,10 +480,7 @@ If the audio is empty, unclear, corrupted, or contains no detectable speech, ret
       { parts: [{ inlineData: { mimeType, data: audio } }, { text: prompt }] },
     ];
 
-    // Skip Vertex AI for chunk transcription — use Gemini API key directly.
-    // Chunks are high-frequency, latency-sensitive operations; Vertex AI adds
-    // overhead and quota pressure. Gemini API key is simpler and more reliable here.
-    const responseText = await generateContent(uid, contents, { maxOutputTokens: 8192 }, { skipVertex: true });
+    const responseText = await generateContent(uid, contents, { maxOutputTokens: 8192 });
     const parsed = safeParseJson(responseText);
     res.json(parsed);
   } catch (err) {
