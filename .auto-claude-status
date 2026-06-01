@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "009-reference-text-custom-vocabulary-for-transcription",
+  "state": "building",
+  "subtasks": {
+    "completed": 7,
+    "total": 14,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Frontend Logic",
+    "id": null,
+    "total": 5
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 8,
+    "started_at": "2026-06-01T03:30:50.626986"
+  },
+  "last_update": "2026-06-01T03:43:41.868306"
+}
