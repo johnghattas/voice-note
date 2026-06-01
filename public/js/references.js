@@ -50,6 +50,7 @@ function renderReferences() {
   }
 
   referencesList.innerHTML = allReferences.map((ref) => createReferenceCard(ref)).join("");
+  bindReferenceEvents();
 }
 
 // Create reference card HTML
@@ -59,6 +60,12 @@ function createReferenceCard(ref) {
       <div class="reference-card-header">
         <div class="reference-replacement">${escapeHtml(ref.text)}</div>
         <div class="reference-card-actions">
+          <button class="reference-edit-btn" data-id="${ref.id}" title="Edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
           <button class="reference-delete-btn" data-id="${ref.id}" title="Delete">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -93,3 +100,91 @@ referencesModal.addEventListener("click", (e) => {
     referencesModal.classList.add("hidden");
   }
 });
+
+// Bind events for reference cards
+function bindReferenceEvents() {
+  referencesList.querySelectorAll(".reference-card").forEach((card) => {
+    const id = card.dataset.id;
+
+    const editBtn = card.querySelector(".reference-edit-btn");
+    if (editBtn) {
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editReference(id);
+      });
+    }
+
+    const deleteBtn = card.querySelector(".reference-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteReference(id);
+      });
+    }
+  });
+}
+
+// Create new reference
+const addReferenceBtn = document.getElementById("addReferenceBtn");
+const referenceTextInput = document.getElementById("referenceText");
+
+if (addReferenceBtn) {
+  addReferenceBtn.addEventListener("click", async () => {
+    const text = referenceTextInput.value.trim();
+    if (!text) {
+      alert("Please enter reference text");
+      return;
+    }
+
+    try {
+      await db.collection("references").add({
+        userId: currentUser.uid,
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      referenceTextInput.value = "";
+    } catch (err) {
+      alert("Failed to add reference: " + err.message);
+    }
+  });
+}
+
+// Edit reference
+function editReference(id) {
+  const ref = allReferences.find((r) => r.id === id);
+  if (!ref) return;
+
+  const newText = prompt("Edit reference text:", ref.text);
+  if (newText === null || newText.trim() === "") return;
+
+  updateReference(id, newText.trim());
+}
+
+// Update reference in Firestore
+async function updateReference(id, newText) {
+  try {
+    await db.collection("references").doc(id).update({
+      text: newText,
+    });
+
+    const ref = allReferences.find((r) => r.id === id);
+    if (ref) ref.text = newText;
+    renderReferences();
+  } catch (err) {
+    alert("Failed to update reference: " + err.message);
+  }
+}
+
+// Delete reference
+async function deleteReference(id) {
+  if (!confirm("Are you sure you want to delete this reference?")) return;
+
+  try {
+    await db.collection("references").doc(id).delete();
+    allReferences = allReferences.filter((r) => r.id !== id);
+    renderReferences();
+  } catch (err) {
+    alert("Failed to delete reference: " + err.message);
+  }
+}
