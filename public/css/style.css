@@ -842,6 +842,37 @@ body {
   border-color: var(--primary);
 }
 
+/* ─── Type Filter Buttons ─── */
+.type-filter-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.type-filter-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-filter-btn:hover {
+  background: var(--bg);
+  border-color: var(--primary);
+}
+
+.type-filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
@@ -1460,6 +1491,15 @@ body {
 
   .search-input {
     max-width: none;
+  }
+
+  .type-filter-buttons {
+    gap: 6px;
+  }
+
+  .type-filter-btn {
+    font-size: 0.8rem;
+    padding: 5px 12px;
   }
 
   .mic-btn {
