@@ -160,6 +160,30 @@ function safeParseJson(responseText) {
   }
 }
 
+async function fetchReferences(uid) {
+  try {
+    const snapshot = await admin.firestore()
+      .collection("references")
+      .where("userId", "==", uid)
+      .where("isActive", "==", true)
+      .get();
+
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        text: data.text || "",
+        category: data.category || "general",
+      };
+    });
+  } catch (err) {
+    console.error("Error fetching references:", err);
+    return [];
+  }
+}
+
 exports.transcribe = onRequest({ cors: true, maxInstances: 10, invoker: "public", timeoutSeconds: 300, memory: "1GiB" }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
