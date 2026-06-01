@@ -5,12 +5,14 @@ const referencesList = document.getElementById("referencesList");
 
 let allReferences = [];
 let unsubscribeReferences = null;
+let activeReferences = new Set();
 
 // Initialize references when user is available
 function initReferences(user) {
   allReferences = [];
   if (unsubscribeReferences) unsubscribeReferences();
 
+  loadActiveReferences();
   listenForReferences(user);
 }
 
@@ -55,9 +57,11 @@ function renderReferences() {
 
 // Create reference card HTML
 function createReferenceCard(ref) {
+  const isActive = activeReferences.has(ref.id);
   return `
     <div class="reference-card" data-id="${ref.id}">
       <div class="reference-card-header">
+        <input type="checkbox" class="reference-checkbox" data-id="${ref.id}" ${isActive ? "checked" : ""} />
         <div class="reference-replacement">${escapeHtml(ref.text)}</div>
         <div class="reference-card-actions">
           <button class="reference-edit-btn" data-id="${ref.id}" title="Edit">
@@ -105,6 +109,14 @@ referencesModal.addEventListener("click", (e) => {
 function bindReferenceEvents() {
   referencesList.querySelectorAll(".reference-card").forEach((card) => {
     const id = card.dataset.id;
+
+    const checkbox = card.querySelector(".reference-checkbox");
+    if (checkbox) {
+      checkbox.addEventListener("change", (e) => {
+        e.stopPropagation();
+        toggleReferenceActive(id, e.target.checked);
+      });
+    }
 
     const editBtn = card.querySelector(".reference-edit-btn");
     if (editBtn) {
@@ -183,8 +195,46 @@ async function deleteReference(id) {
   try {
     await db.collection("references").doc(id).delete();
     allReferences = allReferences.filter((r) => r.id !== id);
+    activeReferences.delete(id);
+    saveActiveReferences();
     renderReferences();
   } catch (err) {
     alert("Failed to delete reference: " + err.message);
   }
+}
+
+// Load active references from localStorage
+function loadActiveReferences() {
+  try {
+    const stored = localStorage.getItem("activeReferences");
+    if (stored) {
+      activeReferences = new Set(JSON.parse(stored));
+    }
+  } catch (err) {
+    activeReferences = new Set();
+  }
+}
+
+// Save active references to localStorage
+function saveActiveReferences() {
+  try {
+    localStorage.setItem("activeReferences", JSON.stringify([...activeReferences]));
+  } catch (err) {
+    // Ignore
+  }
+}
+
+// Toggle reference active state
+function toggleReferenceActive(id, isActive) {
+  if (isActive) {
+    activeReferences.add(id);
+  } else {
+    activeReferences.delete(id);
+  }
+  saveActiveReferences();
+}
+
+// Get active references (exported for use by recording logic)
+function getActiveReferences() {
+  return allReferences.filter((r) => activeReferences.has(r.id));
 }
