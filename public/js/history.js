@@ -11,6 +11,7 @@ let scrollObserver = null;
 let isInitialLoad = false;
 let skeletonShownAt = null;
 let skeletonMinDisplayTimer = null;
+let currentTypeFilter = 'all';
 const PAGE_SIZE = 20;
 const sentinel = document.getElementById("loadMoreSentinel");
 
@@ -182,9 +183,20 @@ function renderHistory() {
   skeletonShownAt = null;
 
   const filter = searchInput.value.toLowerCase();
-  const filtered = filter
-    ? allTranscriptions.filter((t) => t.text.toLowerCase().includes(filter))
-    : allTranscriptions;
+  let filtered = allTranscriptions;
+
+  // Apply type filter
+  if (currentTypeFilter !== 'all') {
+    filtered = filtered.filter((t) => {
+      const type = t.type || (t.language === "ar-to-en" ? "translation" : "transcription");
+      return type === currentTypeFilter;
+    });
+  }
+
+  // Apply text search filter
+  if (filter) {
+    filtered = filtered.filter((t) => t.text.toLowerCase().includes(filter));
+  }
 
   if (filtered.length === 0) {
     historyList.innerHTML = `<div class="empty-state">${
@@ -344,6 +356,21 @@ let searchTimeout;
 searchInput.addEventListener("input", () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(renderHistory, 300);
+});
+
+// Type filter buttons
+const typeFilterButtons = document.querySelectorAll(".type-filter-btn");
+typeFilterButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const type = btn.dataset.type;
+    currentTypeFilter = type;
+
+    // Update active state
+    typeFilterButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    renderHistory();
+  });
 });
 
 function openEditModal(docIdOrText, typeOrOriginal, onAcceptOrType) {
