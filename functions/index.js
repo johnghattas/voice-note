@@ -160,6 +160,101 @@ function safeParseJson(responseText) {
   }
 }
 
+async function fetchReferences(uid, referenceIds = null) {
+  try {
+    // If specific reference IDs are provided, fetch only those
+    if (referenceIds && Array.isArray(referenceIds) && referenceIds.length > 0) {
+      // Firestore 'in' queries are limited to 30 items
+      const chunks = [];
+      for (let i = 0; i < referenceIds.length; i += 30) {
+        chunks.push(referenceIds.slice(i, i + 30));
+      }
+
+      const allDocs = [];
+      for (const chunk of chunks) {
+        const snapshot = await admin.firestore()
+          .collection("references")
+          .where("userId", "==", uid)
+          .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+          .get();
+        allDocs.push(...snapshot.docs);
+      }
+
+      if (allDocs.length === 0) return [];
+
+      return allDocs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: data.type || "term",
+          text: data.text || "",
+          spokenForm: data.spokenForm || "",
+          caseSensitive: data.caseSensitive || false,
+        };
+      });
+    }
+
+    // No referenceIds provided, return empty array
+    return [];
+  } catch (err) {
+    console.error("Error fetching references:", err);
+    return [];
+  }
+}
+
+function buildPromptWithReferences(basePrompt, references) {
+  if (!references || references.length === 0) {
+    return basePrompt;
+  }
+
+  // Group references by type
+  const byType = {
+    link: references.filter(r => r.type === "link"),
+    path: references.filter(r => r.type === "path"),
+    term: references.filter(r => r.type === "term"),
+    brand: references.filter(r => r.type === "brand")
+  };
+
+  let referenceSection = "Custom Vocabulary:\n";
+
+  if (byType.link.length > 0) {
+    referenceSection += "\nLinks:\n";
+    byType.link.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
+
+  if (byType.path.length > 0) {
+    referenceSection += "\nFile Paths:\n";
+    byType.path.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
+
+  if (byType.term.length > 0) {
+    referenceSection += "\nTechnical Terms:\n";
+    byType.term.forEach(ref => {
+      const caseNote = ref.caseSensitive ? " (preserve casing)" : "";
+      referenceSection += `- When you hear "${ref.spokenForm}"${caseNote}, write "${ref.text}"\n`;
+    });
+  }
+
+  if (byType.brand.length > 0) {
+    referenceSection += "\nBrand Names:\n";
+    byType.brand.forEach(ref => {
+      referenceSection += `- When you hear "${ref.spokenForm}", write "${ref.text}"\n`;
+    });
+  }
+
+  const enhancedPrompt = `${referenceSection}
+
+---
+
+${basePrompt}`;
+
+  return enhancedPrompt;
+}
+
 exports.transcribe = onRequest({ cors: true, maxInstances: 10, invoker: "public", timeoutSeconds: 300, memory: "1GiB" }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -173,7 +268,7 @@ exports.transcribe = onRequest({ cors: true, maxInstances: 10, invoker: "public"
   }
   const uid = decoded.uid;
 
-  const { audio, mimeType, mode, text } = req.body;
+  const { audio, mimeType, mode, text, referenceIds } = req.body;
 
   // --- TEXT-ONLY MODE: phase 2 post-processing for chunked recordings ---
   // When text is provided without audio, run the stitched text through the
@@ -289,6 +384,9 @@ Return ONLY valid JSON: {"text": "the generated prompt here", "language": "${lan
     return;
   }
 
+  // Fetch references if referenceIds are provided
+  const references = await fetchReferences(uid, referenceIds);
+
   let prompt;
   if (mode === "translate") {
     prompt = `Listen to this Arabic audio and translate it to English. Do not transcribe the Arabic, only provide the English translation.
@@ -396,6 +494,9 @@ Detect the primary language ("en" if mostly English, "ar" if mostly Arabic, "mix
 Return ONLY valid JSON in this exact format: {"text": "the transcribed text here", "language": "en" or "ar" or "mixed"}
 If the audio is empty, unclear, corrupted, or you cannot confidently understand the speech, return: {"text": "", "language": "unknown"}`;
   }
+
+  // Enhance prompt with references
+  prompt = buildPromptWithReferences(prompt, references);
 
   try {
     const contents = [

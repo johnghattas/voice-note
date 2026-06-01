@@ -323,6 +323,7 @@ auth.onAuthStateChanged((user) => {
   currentUser = user;
   userEmail.textContent = user.email;
   initHistory(user);
+  initReferences(user);
   restoreQueue();
 });
 
@@ -620,10 +621,16 @@ async function handleStreamingComplete(id, sr, mode) {
 
   try {
     const token = await currentUser.getIdToken();
+    const referenceIds = getActiveReferenceIds();
+    const body = { text: stitchedText, mode };
+    if (referenceIds.length > 0) {
+      body.referenceIds = referenceIds;
+    }
+
     const res = await fetch("/api/transcribe", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ text: stitchedText, mode }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -671,10 +678,16 @@ async function retryPostProcessing(id) {
 
   try {
     const token = await currentUser.getIdToken();
+    const referenceIds = getActiveReferenceIds();
+    const body = { text: rawText, mode };
+    if (referenceIds.length > 0) {
+      body.referenceIds = referenceIds;
+    }
+
     const res = await fetch("/api/transcribe", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ text: rawText, mode }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -727,10 +740,16 @@ async function retryStitching(id, item) {
 
   try {
     const token = await currentUser.getIdToken();
+    const referenceIds = getActiveReferenceIds();
+    const body = { text: stitchedText, mode };
+    if (referenceIds.length > 0) {
+      body.referenceIds = referenceIds;
+    }
+
     const res = await fetch("/api/transcribe", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ text: stitchedText, mode }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -877,6 +896,17 @@ function mergeAllChunks(chunkResults) {
   return merged.trim();
 }
 
+function getActiveReferenceIds() {
+  try {
+    const stored = localStorage.getItem("voicenotes_activeRefs");
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function sendAudioToServer({ audioBlob, mimeType, isRefining, refineText, refineType, recordingMode }) {
   const base64 = await blobToBase64(audioBlob);
   const token = await currentUser.getIdToken();
@@ -889,10 +919,16 @@ async function sendAudioToServer({ audioBlob, mimeType, isRefining, refineText, 
       body: JSON.stringify({ text: refineText, audio: base64, mimeType, type: refineType }),
     });
   } else {
+    const referenceIds = getActiveReferenceIds();
+    const body = { audio: base64, mimeType, mode: recordingMode };
+    if (referenceIds.length > 0) {
+      body.referenceIds = referenceIds;
+    }
+
     res = await fetch("/api/transcribe", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ audio: base64, mimeType, mode: recordingMode }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -1150,6 +1186,11 @@ class StreamingRecorder {
 
       const body = { audio: base64, mimeType: blob.type, seq: seqNum };
       if (this.language) body.language = this.language;
+
+      const referenceIds = getActiveReferenceIds();
+      if (referenceIds.length > 0) {
+        body.referenceIds = referenceIds;
+      }
 
       const resp = await fetch("/api/transcribe-chunk", {
         method: "POST",

@@ -2,9 +2,9 @@
   "feature": "Add frosted-glass backdrop to floating recorder bar",
   "description": "Add a frosted-glass panel behind the recorder bar to create clear visual separation between the recording controls and scrolling history content beneath them. This is a CSS-only change to the existing .recorder-bar element plus minor cleanup of redundant child styles.",
   "created_at": "2026-05-27T22:01:23.867Z",
-  "updated_at": "2026-05-28T00:00:00.000Z",
-  "status": "planned",
-  "planStatus": "approved",
+  "updated_at": "2026-06-01T00:30:50.739Z",
+  "status": "human_review",
+  "planStatus": "review",
   "workflow_type": "development",
   "services_involved": [
     "frontend-css"
@@ -13,7 +13,7 @@
   "files_modified": [
     "public/css/style.css"
   ],
-  "risk_assessment": "Low risk \u2014 CSS-only changes to a single file. No JavaScript, HTML structure, or functionality changes. The frosted-glass pattern (backdrop-filter + rgba background) is already used by .status-text in this codebase, confirming browser compatibility intent. backdrop-filter has broad support (Chrome 76+, Safari 9+, Firefox 103+, Edge 79+).",
+  "risk_assessment": "Low risk — CSS-only changes to a single file. No JavaScript, HTML structure, or functionality changes. The frosted-glass pattern (backdrop-filter + rgba background) is already used by .status-text in this codebase, confirming browser compatibility intent. backdrop-filter has broad support (Chrome 76+, Safari 9+, Firefox 103+, Edge 79+).",
   "phases": [
     {
       "id": "phase-1",
@@ -32,7 +32,7 @@
         {
           "id": "1.2",
           "title": "Simplify .status-text to remove redundant frosted-glass",
-          "description": "In public/css/style.css, update .status-text (line ~422) to remove its own background and backdrop-filter since these are now provided by the parent .recorder-bar panel:\n\nCHANGE:\n- background: rgba(255,255,255,0.9) \u2192 remove this property entirely\n- backdrop-filter: blur(4px) \u2192 remove this property entirely\n\nKEEP unchanged:\n- color: var(--text-secondary)\n- font-size: 0.75rem\n- padding: 2px 10px\n- border-radius: 12px",
+          "description": "In public/css/style.css, update .status-text (line ~422) to remove its own background and backdrop-filter since these are now provided by the parent .recorder-bar panel:\n\nCHANGE:\n- background: rgba(255,255,255,0.9) → remove this property entirely\n- backdrop-filter: blur(4px) → remove this property entirely\n\nKEEP unchanged:\n- color: var(--text-secondary)\n- font-size: 0.75rem\n- padding: 2px 10px\n- border-radius: 12px",
           "file": "public/css/style.css",
           "status": "completed",
           "notes": "Removed background: rgba(255,255,255,0.9) and backdrop-filter: blur(4px) from .status-text. Kept color, font-size, padding, and border-radius unchanged. These visual effects are now inherited from the parent .recorder-bar panel.",
@@ -50,10 +50,10 @@
         {
           "id": "1.4",
           "title": "Verify hover/active transforms on child buttons",
-          "description": "Verification-only subtask. Confirm that .mic-btn:hover (transform: scale(1.05)) and .mic-btn:active (transform: scale(0.95)) still work correctly since these are on child elements \u2014 they should not conflict with the parent's translateX(-50%). No code changes expected unless a visual issue is found.",
+          "description": "Verification-only subtask. Confirm that .mic-btn:hover (transform: scale(1.05)) and .mic-btn:active (transform: scale(0.95)) still work correctly since these are on child elements — they should not conflict with the parent's translateX(-50%). No code changes expected unless a visual issue is found.",
           "file": "public/css/style.css",
           "status": "completed",
-          "notes": "Verified: .mic-btn:hover (scale 1.05) and .mic-btn:active (scale 0.95) are on child elements, completely independent of the parent .recorder-bar's translateX(-50%). CSS transform is not inherited \u2014 parent and child transforms operate in separate coordinate spaces. No conflicts, no code changes needed. All button variants (translate-btn, prompt-btn, clean-btn) confirmed safe.",
+          "notes": "Verified: .mic-btn:hover (scale 1.05) and .mic-btn:active (scale 0.95) are on child elements, completely independent of the parent .recorder-bar's translateX(-50%). CSS transform is not inherited — parent and child transforms operate in separate coordinate spaces. No conflicts, no code changes needed. All button variants (translate-btn, prompt-btn, clean-btn) confirmed safe.",
           "updated_at": "2026-05-27T22:27:54.391547+00:00"
         }
       ]
@@ -84,5 +84,8 @@
     "acceptance_criteria": "5/5 verified",
     "verified_by": "qa_agent"
   },
-  "last_updated": "2026-05-28T00:00:00.000Z"
+  "last_updated": "2026-05-28T00:00:00.000Z",
+  "reviewReason": "completed",
+  "xstateState": "human_review",
+  "executionPhase": "complete"
 }
