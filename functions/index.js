@@ -184,6 +184,28 @@ async function fetchReferences(uid) {
   }
 }
 
+function buildPromptWithReferences(basePrompt, references) {
+  if (!references || references.length === 0) {
+    return basePrompt;
+  }
+
+  const referenceSection = references
+    .map((ref) => `- ${ref.text}`)
+    .join("\n");
+
+  const enhancedPrompt = `IMPORTANT: Use the following reference text and custom vocabulary when transcribing. These are domain-specific terms, names, and phrases that may appear in the audio:
+
+${referenceSection}
+
+When you encounter words or phrases that match or sound similar to items in the reference list, use the reference text spelling and format.
+
+---
+
+${basePrompt}`;
+
+  return enhancedPrompt;
+}
+
 exports.transcribe = onRequest({ cors: true, maxInstances: 10, invoker: "public", timeoutSeconds: 300, memory: "1GiB" }, async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
