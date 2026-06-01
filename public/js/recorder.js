@@ -323,6 +323,7 @@ auth.onAuthStateChanged((user) => {
   currentUser = user;
   userEmail.textContent = user.email;
   initHistory(user);
+  initReferences(user);
   restoreQueue();
 });
 
