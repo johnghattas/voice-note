@@ -509,7 +509,7 @@ body {
   content: "";
   position: absolute;
   top: 2px;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 16px;
   height: 16px;
   background: white;
@@ -550,7 +550,7 @@ body {
 
 .queue-card[data-status="done"] {
   cursor: pointer;
-  border-left: 3px solid #22c55e;
+  border-inline-start: 3px solid #22c55e;
 }
 
 .queue-card[data-status="done"]:hover {
@@ -558,16 +558,16 @@ body {
 }
 
 .queue-card[data-status="failed"] {
-  border-left: 3px solid var(--danger);
+  border-inline-start: 3px solid var(--danger);
   background: #fef2f2;
 }
 
 .queue-card[data-status="processing"] {
-  border-left: 3px solid var(--primary);
+  border-inline-start: 3px solid var(--primary);
 }
 
 .queue-card[data-status="queued"] {
-  border-left: 3px solid #94a3b8;
+  border-inline-start: 3px solid #94a3b8;
   opacity: 0.7;
 }
 
@@ -664,7 +664,7 @@ body {
   padding: 8px 10px;
   background: var(--bg);
   border-radius: 8px;
-  border-left: 2px solid #93c5fd;
+  border-inline-start: 2px solid #93c5fd;
   white-space: pre-wrap;
   word-break: break-word;
   unicode-bidi: plaintext;
@@ -929,7 +929,7 @@ body {
 .card-date {
   font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .card-text {
@@ -1029,7 +1029,7 @@ body {
 .skeleton-meta .skeleton-line {
   height: 12px;
   width: 60px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .skeleton-text {
