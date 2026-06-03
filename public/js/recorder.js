@@ -1257,7 +1257,7 @@ function createQueueCardHTML(id, item) {
 
     bodyHTML = `
       <div class="queue-streaming-progress">
-        <div class="queue-streaming-counter">${counterText}</div>
+        <div class="queue-streaming-counter" dir="auto">${counterText}</div>
         <div class="streaming-progress-bar">
           <div class="streaming-progress-bar-fill" style="width: ${pct}%"></div>
         </div>
@@ -1269,7 +1269,7 @@ function createQueueCardHTML(id, item) {
   } else if (status === "stitching") {
     bodyHTML = `
       <div class="queue-streaming-progress">
-        <div class="queue-streaming-counter">Stitching transcript...</div>
+        <div class="queue-streaming-counter" dir="auto">Stitching transcript...</div>
         <div class="streaming-progress-bar">
           <div class="streaming-progress-bar-fill" style="width: 100%"></div>
         </div>
