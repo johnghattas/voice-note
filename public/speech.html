@@ -72,5 +72,33 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/speech-recorder.js"></script>
   <script src="js/history.js"></script>
+  <script>
+    // Theme toggle button handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const sunIcons = document.querySelectorAll('.theme-icon-sun');
+      const moonIcon = document.querySelector('.theme-icon-moon');
+
+      function updateThemeIcon() {
+        const currentTheme = window.getCurrentTheme();
+        if (currentTheme === 'dark') {
+          sunIcons.forEach(icon => icon.classList.add('hidden'));
+          moonIcon.classList.remove('hidden');
+        } else {
+          sunIcons.forEach(icon => icon.classList.remove('hidden'));
+          moonIcon.classList.add('hidden');
+        }
+      }
+
+      // Set initial icon state
+      updateThemeIcon();
+
+      // Toggle theme on button click
+      themeToggleBtn.addEventListener('click', function() {
+        window.toggleTheme();
+        updateThemeIcon();
+      });
+    });
+  </script>
 </body>
 </html>
