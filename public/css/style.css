@@ -41,6 +41,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .hidden {
@@ -203,6 +204,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .app-header h1 {
@@ -247,6 +249,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   max-width: calc(100vw - 24px);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .recorder-buttons {
@@ -870,7 +873,7 @@ body {
   box-shadow: var(--shadow);
   user-select: none;
   -webkit-user-select: none;
-  transition: background 0.2s;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .history-card:active {
