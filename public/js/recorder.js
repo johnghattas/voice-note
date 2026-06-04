@@ -287,6 +287,86 @@ micSelect.addEventListener("change", () => {
 populateMicList();
 navigator.mediaDevices.addEventListener("devicechange", populateMicList);
 
+// ─── Real-time silence detection during recording ───
+// Watches the live mic level while recording. If no voice is captured for
+// SILENCE_GRACE_MS continuously, a warning is shown so the user can fix their
+// mic instead of discovering an empty transcript after recording finishes.
+const SILENCE_GRACE_MS = 3000;   // continuous silence before warning appears
+const VOICE_THRESHOLD = 8;       // avg freq level (0-255) above which voice is considered present
+let silenceAudioCtx = null;
+let silenceAnalyser = null;
+let silenceMonitorInterval = null;
+let silenceStartedAt = null;
+
+function startSilenceMonitor(stream) {
+  stopSilenceMonitor();
+  try {
+    silenceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = silenceAudioCtx.createMediaStreamSource(stream);
+    silenceAnalyser = silenceAudioCtx.createAnalyser();
+    silenceAnalyser.fftSize = 256;
+    src.connect(silenceAnalyser);
+    const data = new Uint8Array(silenceAnalyser.frequencyBinCount);
+    silenceStartedAt = performance.now(); // treat recording start as the silence baseline
+
+    silenceMonitorInterval = setInterval(() => {
+      if (!silenceAnalyser) return;
+      silenceAnalyser.getByteFrequencyData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      const avg = sum / data.length;
+
+      if (avg > VOICE_THRESHOLD) {
+        // Voice detected — reset the silence timer and clear any warning
+        silenceStartedAt = null;
+        hideSilenceWarning();
+      } else {
+        if (silenceStartedAt == null) silenceStartedAt = performance.now();
+        if (performance.now() - silenceStartedAt >= SILENCE_GRACE_MS) {
+          showSilenceWarning();
+        }
+      }
+    }, 150);
+  } catch {
+    // AudioContext unavailable — skip monitoring rather than break recording
+  }
+}
+
+function stopSilenceMonitor() {
+  if (silenceMonitorInterval) { clearInterval(silenceMonitorInterval); silenceMonitorInterval = null; }
+  if (silenceAudioCtx) { silenceAudioCtx.close().catch(() => {}); silenceAudioCtx = null; }
+  silenceAnalyser = null;
+  silenceStartedAt = null;
+  hideSilenceWarning();
+}
+
+function showSilenceWarning() {
+  if (!silenceWarning || !silenceWarning.classList.contains("hidden")) return; // already shown
+  silenceWarning.classList.remove("hidden");
+  playSilenceBeep(); // one-time chime on appearance (guarded by the hidden check above)
+}
+
+function hideSilenceWarning() {
+  if (silenceWarning) silenceWarning.classList.add("hidden");
+}
+
+function playSilenceBeep() {
+  try {
+    const ctx = silenceAudioCtx;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 660;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.24);
+  } catch {}
+}
+
 function getAudioConstraints() {
   const constraints = {
     echoCancellation: true,
@@ -300,6 +380,7 @@ const recordingTimer = document.getElementById("recordingTimer");
 const recordingRow = document.getElementById("recordingRow");
 const cancelRecordBtn = document.getElementById("cancelRecordBtn");
 const statusText = document.getElementById("statusText");
+const silenceWarning = document.getElementById("silenceWarning");
 const logoutBtn = document.getElementById("logoutBtn");
 const userEmail = document.getElementById("userEmail");
 const queueSection = document.getElementById("queueSection");
@@ -403,6 +484,7 @@ async function startRecording() {
     };
 
     mediaRecorder.start();
+    startSilenceMonitor(stream);
     isRecording = true;
     const activeBtn = recordingMode === "translate" ? translateBtn
       : recordingMode === "prompt" ? promptBtn
@@ -441,6 +523,7 @@ function stopRecording() {
     mediaRecorder.stop();
   }
   isRecording = false;
+  stopSilenceMonitor();
   [micBtn, translateBtn, promptBtn, cleanBtn].forEach((b) => b.classList.remove("recording"));
   clearInterval(timerInterval);
   releaseWakeLock();

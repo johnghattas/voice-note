@@ -337,6 +337,39 @@ body {
   color: var(--danger);
 }
 
+.silence-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px auto 0;
+  padding: 8px 14px;
+  max-width: 340px;
+  border-radius: 999px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+  animation: silence-pulse 1.4s ease-in-out infinite;
+}
+
+.silence-warning-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+@keyframes silence-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25); }
+  50% { transform: scale(1.03); box-shadow: 0 3px 14px rgba(245, 158, 11, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .silence-warning { animation: none; }
+}
+
 .cancel-record-btn {
   width: 28px;
   height: 28px;
