@@ -132,12 +132,14 @@ body {
   font-size: 1.75rem;
   color: var(--primary);
   margin-bottom: 4px;
+  unicode-bidi: plaintext;
 }
 
 .auth-subtitle {
   text-align: center;
   color: var(--text-secondary);
   margin-bottom: 28px;
+  unicode-bidi: plaintext;
 }
 
 .auth-tabs {
@@ -190,6 +192,7 @@ body {
   color: var(--danger);
   font-size: 0.9rem;
   text-align: center;
+  unicode-bidi: plaintext;
 }
 
 /* ─── App Page ─── */
@@ -221,6 +224,7 @@ body {
 .user-email {
   font-size: 0.85rem;
   color: var(--text-secondary);
+  unicode-bidi: plaintext;
 }
 
 .app-main {
@@ -358,6 +362,7 @@ body {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--danger);
+  unicode-bidi: plaintext;
 }
 
 .silence-warning {
@@ -481,6 +486,7 @@ body {
   font-size: 0.65rem;
   color: var(--primary);
   font-weight: 500;
+  unicode-bidi: plaintext;
 }
 
 .status-text {
@@ -488,6 +494,7 @@ body {
   font-size: 0.75rem;
   padding: 2px 10px;
   border-radius: 12px;
+  unicode-bidi: plaintext;
 }
 
 /* ─── Result Area ─── */
@@ -565,7 +572,7 @@ body {
   content: "";
   position: absolute;
   top: 2px;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 16px;
   height: 16px;
   background: white;
@@ -587,6 +594,7 @@ body {
   font-weight: 500;
   color: var(--text-secondary);
   white-space: nowrap;
+  unicode-bidi: plaintext;
 }
 
 .queue-list {
@@ -606,7 +614,7 @@ body {
 
 .queue-card[data-status="done"] {
   cursor: pointer;
-  border-left: 3px solid #22c55e;
+  border-inline-start: 3px solid #22c55e;
 }
 
 .queue-card[data-status="done"]:hover {
@@ -614,16 +622,16 @@ body {
 }
 
 .queue-card[data-status="failed"] {
-  border-left: 3px solid var(--danger);
+  border-inline-start: 3px solid var(--danger);
   background: #fef2f2;
 }
 
 .queue-card[data-status="processing"] {
-  border-left: 3px solid var(--primary);
+  border-inline-start: 3px solid var(--primary);
 }
 
 .queue-card[data-status="queued"] {
-  border-left: 3px solid #94a3b8;
+  border-inline-start: 3px solid #94a3b8;
   opacity: 0.7;
 }
 
@@ -710,6 +718,7 @@ body {
   font-size: 0.78rem;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+  unicode-bidi: plaintext;
 }
 
 .queue-partial-text {
@@ -720,7 +729,7 @@ body {
   padding: 8px 10px;
   background: var(--bg);
   border-radius: 8px;
-  border-left: 2px solid #93c5fd;
+  border-inline-start: 2px solid #93c5fd;
   white-space: pre-wrap;
   word-break: break-word;
   unicode-bidi: plaintext;
@@ -762,12 +771,14 @@ body {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text);
+  unicode-bidi: plaintext;
 }
 
 .queue-duration,
 .queue-time {
   font-size: 0.8rem;
   color: var(--text-secondary);
+  unicode-bidi: plaintext;
 }
 
 .queue-expand-icon {
@@ -1011,12 +1022,14 @@ body {
 .card-duration {
   font-size: 0.8rem;
   color: var(--text-secondary);
+  unicode-bidi: plaintext;
 }
 
 .card-date {
   font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-left: auto;
+  margin-inline-start: auto;
+  unicode-bidi: plaintext;
 }
 
 .card-text {
@@ -1040,6 +1053,7 @@ body {
   color: var(--text-secondary);
   padding: 40px 20px;
   font-size: 0.95rem;
+  unicode-bidi: plaintext;
 }
 
 /* ─── Infinite Scroll Sentinel ─── */
@@ -1116,7 +1130,7 @@ body {
 .skeleton-meta .skeleton-line {
   height: 12px;
   width: 60px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .skeleton-text {
@@ -1290,6 +1304,7 @@ body {
 .edit-record-status {
   font-size: 0.9rem;
   color: var(--text-secondary);
+  unicode-bidi: plaintext;
 }
 
 .edit-instructions-preview {
@@ -1300,6 +1315,7 @@ body {
   border: 1px solid var(--border);
   color: var(--text);
   font-style: italic;
+  unicode-bidi: plaintext;
 }
 
 .edit-result-area {
@@ -1368,6 +1384,7 @@ body {
   border: 1px solid var(--border);
   font-size: 0.9rem;
   color: var(--text-secondary);
+  unicode-bidi: plaintext;
 }
 
 .vertex-status-dot {
@@ -1402,6 +1419,7 @@ body {
   font-size: 0.9rem;
   color: var(--text);
   font-weight: 500;
+  unicode-bidi: plaintext;
 }
 
 .vertex-setup-form {
@@ -1486,6 +1504,7 @@ body {
   font-size: 0.9rem;
   color: var(--text-secondary);
   line-height: 1.5;
+  unicode-bidi: plaintext;
 }
 
 .token-area {
@@ -1509,6 +1528,7 @@ body {
   font-size: 0.8rem;
   word-break: break-all;
   user-select: all;
+  unicode-bidi: plaintext;
 }
 
 .settings-actions {
@@ -1519,6 +1539,7 @@ body {
 .token-warning {
   font-size: 0.8rem;
   color: var(--danger);
+  unicode-bidi: plaintext;
 }
 
 /* ─── Mobile ─── */

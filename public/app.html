@@ -52,7 +52,7 @@
     <section class="history-section">
       <div class="history-header">
         <h2>History</h2>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search..." dir="auto">
       </div>
       <div class="type-filter-buttons">
         <button class="type-filter-btn active" data-type="all">All</button>
@@ -138,7 +138,7 @@
       </div>
       <div class="edit-modal-body">
         <label class="edit-label">Original Text</label>
-        <div id="editOriginalText" class="edit-original-text"></div>
+        <div id="editOriginalText" class="edit-original-text" dir="auto"></div>
         <label class="edit-label">What do you want to change?</label>
         <div class="edit-record-row">
           <button id="editRecordBtn" class="edit-record-btn" title="Record instructions">
@@ -147,12 +147,12 @@
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
             </svg>
           </button>
-          <div id="editRecordStatus" class="edit-record-status">Tap to record your edit instructions</div>
+          <div id="editRecordStatus" class="edit-record-status" dir="auto">Tap to record your edit instructions</div>
         </div>
-        <div id="editInstructionsPreview" class="edit-instructions-preview hidden"></div>
+        <div id="editInstructionsPreview" class="edit-instructions-preview hidden" dir="auto"></div>
         <div id="editResultArea" class="edit-result-area hidden">
           <label class="edit-label">Refined Text</label>
-          <div id="editResultText" class="edit-result-text"></div>
+          <div id="editResultText" class="edit-result-text" dir="auto"></div>
           <div class="edit-result-actions">
             <button id="editAcceptBtn" class="btn btn-primary btn-small">Accept</button>
             <button id="editCancelBtn" class="btn btn-small">Cancel</button>
@@ -174,7 +174,7 @@
       </div>
       <div class="edit-modal-body">
         <div id="settingsTabDesktop" class="settings-tab-content">
-          <p class="settings-desc">Generate an API token to connect the desktop app. The token lasts forever until you regenerate it.</p>
+          <p class="settings-desc" dir="auto">Generate an API token to connect the desktop app. The token lasts forever until you regenerate it.</p>
           <div id="tokenArea" class="token-area hidden">
             <label class="edit-label">Your API Token</label>
             <div class="token-display">
@@ -186,31 +186,31 @@
             <button id="generateTokenBtn" class="btn btn-primary">Generate Token</button>
             <button id="regenerateTokenBtn" class="btn btn-small btn-danger hidden">Regenerate</button>
           </div>
-          <p id="tokenWarning" class="token-warning hidden">Regenerating will disconnect any desktop app using the old token.</p>
+          <p id="tokenWarning" class="token-warning hidden" dir="auto">Regenerating will disconnect any desktop app using the old token.</p>
         </div>
 
         <div id="settingsTabVertex" class="settings-tab-content hidden">
           <div id="vertexStatus" class="vertex-status">
             <div id="vertexStatusDot" class="vertex-status-dot disconnected"></div>
-            <span id="vertexStatusText">Not connected</span>
+            <span id="vertexStatusText" dir="auto">Not connected</span>
           </div>
 
           <div id="vertexConnected" class="hidden">
             <div class="vertex-info-row">
               <label class="edit-label">Google Account</label>
-              <span id="vertexEmail" class="vertex-info-value"></span>
+              <span id="vertexEmail" class="vertex-info-value" dir="auto"></span>
             </div>
             <div class="vertex-info-row">
               <label class="edit-label">Project ID</label>
-              <span id="vertexProjectDisplay" class="vertex-info-value"></span>
+              <span id="vertexProjectDisplay" class="vertex-info-value" dir="auto"></span>
             </div>
             <div class="vertex-info-row">
               <label class="edit-label">Region</label>
-              <span id="vertexRegionDisplay" class="vertex-info-value"></span>
+              <span id="vertexRegionDisplay" class="vertex-info-value" dir="auto"></span>
             </div>
             <div class="vertex-info-row">
               <label class="edit-label">Connected</label>
-              <span id="vertexConnectedAt" class="vertex-info-value"></span>
+              <span id="vertexConnectedAt" class="vertex-info-value" dir="auto"></span>
             </div>
             <div class="vertex-model-section">
               <label class="edit-label">AI Model</label>
@@ -232,10 +232,10 @@
           </div>
 
           <div id="vertexSetupForm" class="vertex-setup-form">
-            <p class="settings-desc">Connect your Google Cloud project to use Vertex AI for transcription. Requires a project with the Vertex AI API enabled.</p>
+            <p class="settings-desc" dir="auto">Connect your Google Cloud project to use Vertex AI for transcription. Requires a project with the Vertex AI API enabled.</p>
             <div class="vertex-field">
               <label class="edit-label" for="vertexProjectId">Project ID</label>
-              <input type="text" id="vertexProjectId" class="vertex-input" placeholder="my-gcloud-project">
+              <input type="text" id="vertexProjectId" class="vertex-input" placeholder="my-gcloud-project" dir="auto">
             </div>
             <div class="vertex-field">
               <label class="edit-label" for="vertexRegion">Region</label>
@@ -261,7 +261,7 @@
                 Sign in with Google
               </button>
             </div>
-            <p id="vertexError" class="token-warning hidden"></p>
+            <p id="vertexError" class="token-warning hidden" dir="auto"></p>
           </div>
         </div>
       </div>
