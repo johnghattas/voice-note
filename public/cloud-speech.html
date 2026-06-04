@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VoiceNotes - Cloud Speech</title>
+  <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="app-page">
@@ -11,6 +12,13 @@
     <h1>VoiceNotes <span style="font-size:0.7em;color:var(--text-secondary)">Cloud</span> <span id="debugToggle" style="font-size:0.4em;color:#555;cursor:pointer" title="Toggle Debug">DBG</span></h1>
     <div class="header-actions">
       <span id="userEmail" class="user-email"></span>
+      <button id="themeToggleBtn" class="btn btn-small" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+          <path class="theme-icon-sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/>
+          <circle class="theme-icon-sun" cx="12" cy="12" r="4"/>
+          <path class="theme-icon-moon hidden" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
       <a href="/app.html" class="btn btn-small">Full App</a>
       <a href="/speech.html" class="btn btn-small">Web Speech</a>
       <button id="logoutBtn" class="btn btn-small">Logout</button>
@@ -72,5 +80,33 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/cloud-recorder.js"></script>
   <script src="js/history.js"></script>
+  <script>
+    // Theme toggle button handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const sunIcons = document.querySelectorAll('.theme-icon-sun');
+      const moonIcon = document.querySelector('.theme-icon-moon');
+
+      function updateThemeIcon() {
+        const currentTheme = window.getCurrentTheme();
+        if (currentTheme === 'dark') {
+          sunIcons.forEach(icon => icon.classList.add('hidden'));
+          moonIcon.classList.remove('hidden');
+        } else {
+          sunIcons.forEach(icon => icon.classList.remove('hidden'));
+          moonIcon.classList.add('hidden');
+        }
+      }
+
+      // Set initial icon state
+      updateThemeIcon();
+
+      // Toggle theme on button click
+      themeToggleBtn.addEventListener('click', function() {
+        window.toggleTheme();
+        updateThemeIcon();
+      });
+    });
+  </script>
 </body>
 </html>

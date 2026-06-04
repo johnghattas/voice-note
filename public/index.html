@@ -4,9 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VoiceNotes - Login</title>
+  <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="auth-page">
+  <button id="themeToggleBtn" class="btn btn-small theme-toggle-auth" title="Toggle theme">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+      <path class="theme-icon-sun" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/>
+      <circle class="theme-icon-sun" cx="12" cy="12" r="4"/>
+      <path class="theme-icon-moon hidden" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
   <div class="auth-card">
     <h1 class="auth-title">VoiceNotes</h1>
     <p class="auth-subtitle">Speech to Text with AI</p>
@@ -37,5 +45,33 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js"></script>
+  <script>
+    // Theme toggle button handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const themeToggleBtn = document.getElementById('themeToggleBtn');
+      const sunIcons = document.querySelectorAll('.theme-icon-sun');
+      const moonIcon = document.querySelector('.theme-icon-moon');
+
+      function updateThemeIcon() {
+        const currentTheme = window.getCurrentTheme();
+        if (currentTheme === 'dark') {
+          sunIcons.forEach(icon => icon.classList.add('hidden'));
+          moonIcon.classList.remove('hidden');
+        } else {
+          sunIcons.forEach(icon => icon.classList.remove('hidden'));
+          moonIcon.classList.add('hidden');
+        }
+      }
+
+      // Set initial icon state
+      updateThemeIcon();
+
+      // Toggle theme on button click
+      themeToggleBtn.addEventListener('click', function() {
+        window.toggleTheme();
+        updateThemeIcon();
+      });
+    });
+  </script>
 </body>
 </html>
