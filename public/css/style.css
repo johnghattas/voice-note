@@ -931,6 +931,8 @@ body {
   border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
+  background: var(--card-bg);
+  color: var(--text);
 }
 
 .search-input:focus {
@@ -1361,6 +1363,7 @@ body {
   background: #f0fdf4;
   border-radius: 8px;
   border: 1px solid #bbf7d0;
+  color: #14532d;
   white-space: pre-wrap;
   word-break: break-word;
   unicode-bidi: plaintext;
@@ -1889,4 +1892,30 @@ body {
   color: var(--text-secondary);
   padding: 32px 20px;
   font-size: 0.95rem;
+}
+
+/* ─── Dark mode contrast fixes (form controls + tinted containers) ─── */
+[data-theme='dark'] .mic-select {
+  background: rgba(30, 41, 59, 0.95);
+  color: var(--text);
+}
+
+[data-theme='dark'] .mic-select option,
+[data-theme='dark'] select option {
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+[data-theme='dark'] .edit-result-text {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: var(--text);
+}
+
+[data-theme='dark'] .queue-card[data-status="failed"] {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+[data-theme='dark'] .history-card:active {
+  background: var(--border);
 }
